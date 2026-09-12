@@ -10,6 +10,7 @@ const required = [
   "livevoz-v13-stage.html",
   "livevoz-v13-preload.cjs",
   "livevoz-v13-bridge.js",
+  "livevoz-mobile-v13-1.html",
   "stage-server.cjs",
   "electron-main.cjs",
   "manifest.webmanifest",
@@ -68,13 +69,23 @@ for (const ref of ["livevoz-v13-stage.html", "livevoz-v13-preload.cjs", "livevoz
 }
 
 const stageServer = fs.readFileSync(path.join(root, "stage-server.cjs"), "utf8");
-if (!stageServer.includes('PROTOCOL_VERSION = "13.0"')) {
-  console.error("✗ Stage Network no está en protocolo V13");
-  failed = true;
+for (const text of ['PROTOCOL_VERSION = "13.1"', "DEVICE_PROFILE", "livevoz-mobile-v13-1.html", "livevozInstrument", "livevozTranspose"]) {
+  if (!stageServer.includes(text)) {
+    console.error(`✗ Stage Network V13.1 no incluye: ${text}`);
+    failed = true;
+  }
 }
 if (stageServer.includes('url.pathname==="/invite"')) {
   console.error("✗ Stage Network conserva el endpoint de invitación regresivo");
   failed = true;
+}
+
+const mobile = fs.readFileSync(path.join(root, "livevoz-mobile-v13-1.html"), "utf8");
+for (const text of ["Transposición personal", "Trompeta en Sib", "Saxofón alto en Mib", "Bajo quinto", "DEVICE_PROFILE", "13.1"]) {
+  if (!mobile.includes(text)) {
+    console.error(`✗ Cliente móvil V13.1 no incluye: ${text}`);
+    failed = true;
+  }
 }
 
 const runtime = fs.readFileSync(path.join(root, "livevoz-v11-runtime.js"), "utf8");
