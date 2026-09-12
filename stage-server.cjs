@@ -1,5 +1,6 @@
 "use strict";
 const http = require("node:http");
+const crypto = require("node:crypto");
 const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = Number(process.env.LIVEVOZ_WS_PORT || 8080);
@@ -7,39 +8,58 @@ const HOST = process.env.LIVEVOZ_WS_HOST || "0.0.0.0";
 const MAX_MESSAGE_BYTES = 64 * 1024;
 const HEARTBEAT_MS = 15000;
 const CLIENT_TIMEOUT_MS = 45000;
+const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
+const MAX_CLIENTS_PER_ROOM = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_ROOM || 40);
+const MAX_CLIENTS_PER_IP = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_IP || 12);
+const PROTOCOL_VERSION = "12.0";
 const rooms = new Map();
+const ipCounters = new Map();
+const metrics = {connections:0,messages:0,rejected:0,roomsCreated:0,startTime:Date.now()};
 
 function safeText(value, max=120){ return typeof value === "string" ? value.slice(0,max) : ""; }
-function getRoom(name){
-  if(!rooms.has(name)) rooms.set(name,{clients:new Set(),token:null,lastState:null});
+function now(){ return Date.now(); }
+function hashToken(token){ return crypto.createHash("sha256").update(token || "").digest("hex"); }
+function clientIp(req){ return safeText((req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket.remoteAddress || "unknown",128); }
+function getRoom(name, token){
+  if(!rooms.has(name)){
+    rooms.set(name,{clients:new Set(),tokenHash:hashToken(token),lastState:null,createdAt:now(),updatedAt:now()});
+    metrics.roomsCreated++;
+  }
   return rooms.get(name);
 }
+function incIp(ip){ ipCounters.set(ip,(ipCounters.get(ip)||0)+1); }
+function decIp(ip){ const next=Math.max(0,(ipCounters.get(ip)||1)-1); if(next===0)ipCounters.delete(ip); else ipCounters.set(ip,next); }
 function leaveRoom(ws){
   const room = ws.livevozRoom && rooms.get(ws.livevozRoom);
-  if(!room) return;
-  room.clients.delete(ws);
-  if(room.clients.size===0) rooms.delete(ws.livevozRoom);
+  if(room){ room.clients.delete(ws); room.updatedAt=now(); }
+  if(ws.livevozIp) decIp(ws.livevozIp);
 }
-function send(ws,obj){
-  if(ws.readyState!==WebSocket.OPEN) return;
-  try{ws.send(JSON.stringify(obj));}catch(_e){}
-}
+function send(ws,obj){ if(ws.readyState===WebSocket.OPEN){ try{ws.send(JSON.stringify(obj));}catch(_e){} } }
 function relay(room,sender,message){
   const encoded=JSON.stringify(message);
   if(Buffer.byteLength(encoded)>MAX_MESSAGE_BYTES)return;
   for(const peer of room.clients){ if(peer!==sender && peer.readyState===WebSocket.OPEN) peer.send(encoded); }
 }
+function closeWith(ws,code,reason){ metrics.rejected++; try{ws.close(code,reason);}catch(_e){} }
+function roomSummary(){
+  return [...rooms.entries()].map(([id,r])=>({id,clients:r.clients.size,ageSeconds:Math.round((now()-r.createdAt)/1000),idleSeconds:Math.round((now()-r.updatedAt)/1000),hasState:!!r.lastState}));
+}
 
 const server=http.createServer((req,res)=>{
+  const headers={"cache-control":"no-store","access-control-allow-origin":"*"};
   if(req.url==="/health"){
-    res.writeHead(200,{"content-type":"application/json","cache-control":"no-store"});
-    return res.end(JSON.stringify({ok:true,service:"livevoz-stage-network",rooms:rooms.size,clients:[...rooms.values()].reduce((n,r)=>n+r.clients.size,0)}));
+    res.writeHead(200,{...headers,"content-type":"application/json"});
+    return res.end(JSON.stringify({ok:true,service:"livevoz-stage-network",protocol:PROTOCOL_VERSION,uptimeSeconds:Math.round(process.uptime()),rooms:rooms.size,clients:[...rooms.values()].reduce((n,r)=>n+r.clients.size,0)}));
   }
-  res.writeHead(200,{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"});
-  res.end("LiveVoz Stage Network WebSocket Server\n");
+  if(req.url==="/metrics"){
+    res.writeHead(200,{...headers,"content-type":"application/json"});
+    return res.end(JSON.stringify({...metrics,uptimeSeconds:Math.round((now()-metrics.startTime)/1000),activeRooms:roomSummary()}));
+  }
+  res.writeHead(200,{...headers,"content-type":"text/plain; charset=utf-8"});
+  res.end(`LiveVoz Stage Network v${PROTOCOL_VERSION}\nHealth: /health\nMetrics: /metrics\n`);
 });
 
-const wss=new WebSocketServer({server,maxPayload:MAX_MESSAGE_BYTES,perMessageDeflate:false});
+const wss=new WebSocketServer({server,maxPayload:MAX_MESSAGE_BYTES,perMessageDeflate:false,clientTracking:true});
 wss.on("connection",(ws,req)=>{
   const base=`http://${req.headers.host || "localhost"}`;
   const url=new URL(req.url||"/",base);
@@ -47,44 +67,51 @@ wss.on("connection",(ws,req)=>{
   const token=safeText(url.searchParams.get("token")||"",64);
   const device=safeText(url.searchParams.get("device")||"unknown",120);
   const role=safeText(url.searchParams.get("role")||"unknown",24);
-  if(!roomId){ws.close(1008,"room-required");return;}
-  const room=getRoom(roomId);
-  if(room.token===null) room.token=token;
-  if(room.token!==token){ws.close(4001,"invalid-room-token");return;}
+  const protocol=safeText(url.searchParams.get("protocol")||url.searchParams.get("v")||"",16);
+  const ip=clientIp(req);
 
-  ws.livevozRoom=roomId; ws.livevozDevice=device; ws.livevozRole=role; ws.isAlive=true; ws.lastSeen=Date.now();
-  room.clients.add(ws);
-  ws.on("pong",()=>{ws.isAlive=true;ws.lastSeen=Date.now();});
+  if(!roomId || !device) return closeWith(ws,1008,"invalid-client");
+  if((ipCounters.get(ip)||0)>=MAX_CLIENTS_PER_IP) return closeWith(ws,4003,"ip-limit");
+  const room=getRoom(roomId,token);
+  if(room.clients.size>=MAX_CLIENTS_PER_ROOM) return closeWith(ws,4002,"room-full");
+  if(room.tokenHash!==hashToken(token)) return closeWith(ws,4001,"invalid-room-token");
+
+  ws.livevozRoom=roomId; ws.livevozDevice=device; ws.livevozRole=role; ws.livevozIp=ip; ws.isAlive=true; ws.lastSeen=now();
+  room.clients.add(ws); room.updatedAt=now(); incIp(ip); metrics.connections++;
+
+  send(ws,{type:"WELCOME",payload:{protocol:PROTOCOL_VERSION,roomId,serverTime:now(),compatible:!protocol || protocol.startsWith("12") || protocol.startsWith("11")},timestamp:now(),messageId:`server:${crypto.randomUUID()}`,senderId:"server",senderRole:"server",roomId});
+  if(room.lastState)send(ws,room.lastState);
+
+  ws.on("pong",()=>{ws.isAlive=true;ws.lastSeen=now();});
   ws.on("message",raw=>{
-    ws.lastSeen=Date.now();
-    if(raw.length>MAX_MESSAGE_BYTES)return;
+    ws.lastSeen=now(); room.updatedAt=now(); metrics.messages++;
+    if(raw.length>MAX_MESSAGE_BYTES)return closeWith(ws,1009,"message-too-large");
     let msg; try{msg=JSON.parse(raw.toString("utf8"));}catch(_e){return;}
     if(!msg || typeof msg!=="object")return;
-    if(msg.roomId!==roomId || safeText(msg.roomToken,64)!==room.token)return;
-    if(msg.senderId!==device)return;
-    if(msg.senderRole!==role)return;
+    if(msg.roomId!==roomId) return;
+    if(msg.senderId!==device || msg.senderRole!==role) return;
     const allowed=new Set(["STATE","COMMAND","PING","PONG","DEVICE_JOIN","DEVICE_LEAVE"]);
     if(!allowed.has(msg.type))return;
     if(msg.type==="COMMAND" && role!=="operator")return;
-    if(msg.type==="STATE" && role==="operator")room.lastState=msg;
+    if(msg.type==="STATE" && role==="operator") room.lastState=msg;
     relay(room,ws,msg);
   });
   ws.on("close",()=>leaveRoom(ws));
   ws.on("error",()=>leaveRoom(ws));
-  if(room.lastState)send(ws,room.lastState);
 });
 
 const heartbeat=setInterval(()=>{
-  const now=Date.now();
-  for(const room of rooms.values()){
+  const t=now();
+  for(const [roomId,room] of rooms){
     for(const ws of room.clients){
-      if(!ws.isAlive || now-ws.lastSeen>CLIENT_TIMEOUT_MS){try{ws.terminate();}catch(_e){} continue;}
+      if(!ws.isAlive || t-ws.lastSeen>CLIENT_TIMEOUT_MS){try{ws.terminate();}catch(_e){} continue;}
       ws.isAlive=false;try{ws.ping();}catch(_e){}
     }
+    if(room.clients.size===0 && t-room.updatedAt>ROOM_TTL_MS) rooms.delete(roomId);
   }
 },HEARTBEAT_MS);
 heartbeat.unref();
 
-server.listen(PORT,HOST,()=>console.log(`LiveVoz Stage Network escuchando en ws://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`LiveVoz Stage Network v${PROTOCOL_VERSION} escuchando en ws://${HOST}:${PORT}`));
 process.on("SIGINT",()=>{clearInterval(heartbeat);wss.close(()=>server.close(()=>process.exit(0)));});
 process.on("SIGTERM",()=>{clearInterval(heartbeat);wss.close(()=>server.close(()=>process.exit(0)));});
