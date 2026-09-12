@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "12.0.0",
-  "description": "Teleprompter profesional para conciertos LiveVoz con Supabase, Stage Network y operación resiliente",
+  "version": "13.0.0",
+  "description": "LiveVoz V13 Stage Edition con panel profesional, QR, monitor de dispositivos, Stage Network integrado y preflight",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
@@ -20,6 +20,7 @@
     "dist:linux": "electron-builder --linux AppImage deb --publish never"
   },
   "dependencies": {
+    "qrcode": "^1.5.4",
     "ws": "^8.18.3"
   },
   "devDependencies": {
@@ -38,6 +39,9 @@
       "teleprompter.html",
       "teleprompter-v11.html",
       "livevoz-v11-runtime.js",
+      "livevoz-v13-stage.html",
+      "livevoz-v13-preload.cjs",
+      "livevoz-v13-bridge.js",
       "livevoz-logo.png",
       "manifest.webmanifest",
       "sw.js",
