@@ -41,6 +41,7 @@
       "livevoz-v11-runtime.js",
       "livevoz-v13-stage.html",
       "livevoz-v13-preload.cjs",
+      "livevoz-v13-bridge.js",
       "livevoz-logo.png",
       "manifest.webmanifest",
       "sw.js",
