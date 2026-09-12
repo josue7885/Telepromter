@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "13.0.0",
-  "description": "LiveVoz V13 Stage Edition con panel profesional, QR, monitor de dispositivos, Stage Network integrado y preflight",
+  "version": "13.1.0",
+  "description": "LiveVoz V13.1 con perfiles de músicos, instrumentos y transposición personal por dispositivo",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
@@ -42,6 +42,7 @@
       "livevoz-v13-stage.html",
       "livevoz-v13-preload.cjs",
       "livevoz-v13-bridge.js",
+      "livevoz-mobile-v13-1.html",
       "livevoz-logo.png",
       "manifest.webmanifest",
       "sw.js",
