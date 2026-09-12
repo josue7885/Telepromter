@@ -31,6 +31,8 @@
     "asar": true,
     "files": [
       "teleprompter.html",
+      "teleprompter-v11.html",
+      "livevoz-v11-runtime.js",
       "livevoz-logo.png",
       "manifest.webmanifest",
       "sw.js",
