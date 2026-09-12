@@ -9,6 +9,7 @@ const required = [
   "livevoz-v11-runtime.js",
   "livevoz-v13-stage.html",
   "livevoz-v13-preload.cjs",
+  "livevoz-v13-bridge.js",
   "stage-server.cjs",
   "electron-main.cjs",
   "manifest.webmanifest",
@@ -35,7 +36,7 @@ for (const file of required) {
 }
 
 const html = fs.readFileSync(path.join(root, "teleprompter-v11.html"), "utf8");
-for (const ref of ["./teleprompter.html", "./livevoz-v11-runtime.js"]) {
+for (const ref of ["./teleprompter.html", "./livevoz-v11-runtime.js", "./livevoz-v13-bridge.js"]) {
   if (!html.includes(ref)) {
     console.error(`✗ teleprompter-v11.html no referencia ${ref}`);
     failed = true;
@@ -43,15 +44,23 @@ for (const ref of ["./teleprompter.html", "./livevoz-v11-runtime.js"]) {
 }
 
 const stagePanel = fs.readFileSync(path.join(root, "livevoz-v13-stage.html"), "utf8");
-for (const text of ["Modo concierto", "Generar QR", "Preflight", "Dispositivos conectados"]) {
+for (const text of ["Modo concierto", "Generar QR", "Preflight", "Dispositivos conectados", "LIVEVOZ_V13_GET_STAGE_CONTEXT"]) {
   if (!stagePanel.includes(text)) {
     console.error(`✗ Panel V13 no incluye: ${text}`);
     failed = true;
   }
 }
 
+const bridge = fs.readFileSync(path.join(root, "livevoz-v13-bridge.js"), "utf8");
+for (const text of ["LIVEVOZ_V13_STAGE_CONTEXT", "LIVEVOZ_V13_SET_STAGE_CONFIG", "livevoz_ws_room_token"]) {
+  if (!bridge.includes(text)) {
+    console.error(`✗ Bridge V13 no incluye: ${text}`);
+    failed = true;
+  }
+}
+
 const electronMain = fs.readFileSync(path.join(root, "electron-main.cjs"), "utf8");
-for (const ref of ["livevoz-v13-stage.html", "livevoz-v13-preload.cjs", "livevoz:start-stage"]) {
+for (const ref of ["livevoz-v13-stage.html", "livevoz-v13-preload.cjs", "livevoz:start-stage", "QRCode.toDataURL"]) {
   if (!electronMain.includes(ref)) {
     console.error(`✗ electron-main.cjs no integra ${ref}`);
     failed = true;
@@ -61,6 +70,10 @@ for (const ref of ["livevoz-v13-stage.html", "livevoz-v13-preload.cjs", "livevoz
 const stageServer = fs.readFileSync(path.join(root, "stage-server.cjs"), "utf8");
 if (!stageServer.includes('PROTOCOL_VERSION = "13.0"')) {
   console.error("✗ Stage Network no está en protocolo V13");
+  failed = true;
+}
+if (stageServer.includes('url.pathname==="/invite"')) {
+  console.error("✗ Stage Network conserva el endpoint de invitación regresivo");
   failed = true;
 }
 
