@@ -1,4 +1,4 @@
-const CACHE_NAME = "livevoz-teleprompter-v11-1";
+const CACHE_NAME = "livevoz-teleprompter-v12";
 const APP_SHELL = [
   "./",
   "./teleprompter-v11.html",
@@ -14,34 +14,53 @@ self.addEventListener("install", event => {
 });
 
 self.addEventListener("activate", event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))));
-  self.clients.claim();
+  event.waitUntil(
+    Promise.all([
+      caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))),
+      self.clients.claim()
+    ])
+  );
+});
+
+self.addEventListener("message", event => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+  if (event.data?.type === "CLEAR_LIVEVOZ_CACHE") {
+    event.waitUntil(caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key)))));
+  }
 });
 
 self.addEventListener("fetch", event => {
   const request = event.request;
-  if(request.method !== "GET") return;
+  if (request.method !== "GET") return;
   const url = new URL(request.url);
-  if(url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin) return;
 
-  if(request.mode === "navigate" || url.pathname.endsWith("teleprompter-v11.html") || url.pathname.endsWith("teleprompter.html")){
-    event.respondWith(
-      fetch(request).then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-        return response;
-      }).catch(() => caches.match(request).then(cached => cached || caches.match("./teleprompter-v11.html")))
-    );
+  const isNavigation = request.mode === "navigate" || url.pathname.endsWith("teleprompter-v11.html") || url.pathname.endsWith("teleprompter.html");
+  if (isNavigation) {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(request, { cache: "no-store" });
+        if (fresh.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(request, fresh.clone());
+        }
+        return fresh;
+      } catch (_e) {
+        return (await caches.match(request)) || (await caches.match("./teleprompter-v11.html"));
+      }
+    })());
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then(cached => cached || fetch(request).then(response => {
-      if(response.ok){
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+  event.respondWith((async () => {
+    const cached = await caches.match(request);
+    const networkPromise = fetch(request).then(async response => {
+      if (response.ok) {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(request, response.clone());
       }
       return response;
-    }))
-  );
+    }).catch(() => null);
+    return cached || await networkPromise || new Response("Offline", { status: 503, statusText: "Offline" });
+  })());
 });
