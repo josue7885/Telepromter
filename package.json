@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "1.0.0",
-  "description": "Teleprompter profesional para conciertos LiveVoz",
+  "version": "1.1.0",
+  "description": "Teleprompter profesional para conciertos LiveVoz con Supabase y Stage Network",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
@@ -11,10 +11,14 @@
   "main": "electron-main.cjs",
   "scripts": {
     "start": "electron .",
+    "stage-server": "node stage-server.cjs",
     "dist": "electron-builder --publish never",
     "dist:win": "electron-builder --win nsis portable --publish never",
     "dist:mac": "electron-builder --mac dmg zip --publish never",
     "dist:linux": "electron-builder --linux AppImage deb --publish never"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "electron": "^36.4.0",
@@ -30,19 +34,12 @@
       "livevoz-logo.png",
       "manifest.webmanifest",
       "sw.js",
+      "stage-server.cjs",
       "electron-main.cjs",
       "package.json"
     ],
-    "directories": {
-      "output": "release"
-    },
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ],
-      "icon": "livevoz-logo.png"
-    },
+    "directories": { "output": "release" },
+    "win": { "target": ["nsis", "portable"], "icon": "livevoz-logo.png" },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -50,19 +47,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "LiveVoz Teleprompter"
     },
-    "mac": {
-      "target": [
-        "dmg",
-        "zip"
-      ],
-      "category": "public.app-category.music"
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "AudioVideo"
-    }
+    "mac": { "target": ["dmg", "zip"], "category": "public.app-category.music" },
+    "linux": { "target": ["AppImage", "deb"], "category": "AudioVideo" }
   }
 }
