@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "1.1.0",
-  "description": "Teleprompter profesional para conciertos LiveVoz con Supabase y Stage Network",
+  "version": "12.0.0",
+  "description": "Teleprompter profesional para conciertos LiveVoz con Supabase, Stage Network y operación resiliente",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
@@ -12,6 +12,8 @@
   "scripts": {
     "start": "electron .",
     "stage-server": "node stage-server.cjs",
+    "stage-health": "node scripts/check-stage-network.cjs",
+    "check": "node scripts/check-project.cjs",
     "dist": "electron-builder --publish never",
     "dist:win": "electron-builder --win nsis portable --publish never",
     "dist:mac": "electron-builder --mac dmg zip --publish never",
@@ -23,6 +25,9 @@
   "devDependencies": {
     "electron": "^36.4.0",
     "electron-builder": "^26.0.12"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "build": {
     "appId": "com.livevoz.teleprompter",
@@ -38,6 +43,7 @@
       "sw.js",
       "stage-server.cjs",
       "electron-main.cjs",
+      "scripts/**/*",
       "package.json"
     ],
     "directories": { "output": "release" },
