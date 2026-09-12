@@ -11,12 +11,13 @@ const CLIENT_TIMEOUT_MS = 45000;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_CLIENTS_PER_ROOM = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_ROOM || 40);
 const MAX_CLIENTS_PER_IP = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_IP || 12);
-const PROTOCOL_VERSION = "12.0";
+const PROTOCOL_VERSION = "13.0";
 const rooms = new Map();
 const ipCounters = new Map();
 const metrics = {connections:0,messages:0,rejected:0,roomsCreated:0,startTime:Date.now()};
 
 function safeText(value, max=120){ return typeof value === "string" ? value.slice(0,max) : ""; }
+function escapeHtml(value){ return safeText(value,160).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 function now(){ return Date.now(); }
 function hashToken(token){ return crypto.createHash("sha256").update(token || "").digest("hex"); }
 function clientIp(req){ return safeText((req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket.remoteAddress || "unknown",128); }
@@ -42,21 +43,40 @@ function relay(room,sender,message){
 }
 function closeWith(ws,code,reason){ metrics.rejected++; try{ws.close(code,reason);}catch(_e){} }
 function roomSummary(){
-  return [...rooms.entries()].map(([id,r])=>({id,clients:r.clients.size,ageSeconds:Math.round((now()-r.createdAt)/1000),idleSeconds:Math.round((now()-r.updatedAt)/1000),hasState:!!r.lastState}));
+  return [...rooms.entries()].map(([id,r])=>({
+    id,
+    clients:r.clients.size,
+    ageSeconds:Math.round((now()-r.createdAt)/1000),
+    idleSeconds:Math.round((now()-r.updatedAt)/1000),
+    hasState:!!r.lastState,
+    devices:[...r.clients].map(ws=>({device:ws.livevozDevice,role:ws.livevozRole,lastSeen:ws.lastSeen,connected:true}))
+  }));
+}
+
+function joinPage(url){
+  const room=escapeHtml(url.searchParams.get("room")||"livevoz-stage");
+  const token=escapeHtml(url.searchParams.get("token")||"");
+  const wsUrl=`ws://${escapeHtml(url.host)}/?room=${encodeURIComponent(room)}&token=${encodeURIComponent(token)}`;
+  return `<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LiveVoz Stage</title><style>body{margin:0;background:#07090d;color:#fff;font-family:system-ui;display:grid;place-items:center;min-height:100vh}.c{width:min(92vw,520px);background:#11151d;border:1px solid #2a3341;border-radius:18px;padding:24px}h1{margin-top:0}code{display:block;padding:12px;background:#080b10;border-radius:10px;word-break:break-all;color:#9fc1ff}.ok{color:#60d69a}.m{color:#9ca7ba}</style><div class="c"><h1>LiveVoz Stage</h1><p class="ok">Invitación válida para conectarte al escenario.</p><p><b>Sala:</b> ${room}</p><p><b>PIN:</b> ${token}</p><p class="m">En LiveVoz del teléfono usa esta dirección Stage Network:</p><code>${wsUrl}</code><p class="m">Mantén esta pantalla disponible mientras configuras tu dispositivo.</p></div></html>`;
 }
 
 const server=http.createServer((req,res)=>{
   const headers={"cache-control":"no-store","access-control-allow-origin":"*"};
-  if(req.url==="/health"){
+  const url=new URL(req.url||"/",`http://${req.headers.host||"localhost"}`);
+  if(url.pathname==="/health"){
     res.writeHead(200,{...headers,"content-type":"application/json"});
     return res.end(JSON.stringify({ok:true,service:"livevoz-stage-network",protocol:PROTOCOL_VERSION,uptimeSeconds:Math.round(process.uptime()),rooms:rooms.size,clients:[...rooms.values()].reduce((n,r)=>n+r.clients.size,0)}));
   }
-  if(req.url==="/metrics"){
+  if(url.pathname==="/metrics"){
     res.writeHead(200,{...headers,"content-type":"application/json"});
     return res.end(JSON.stringify({...metrics,uptimeSeconds:Math.round((now()-metrics.startTime)/1000),activeRooms:roomSummary()}));
   }
+  if(url.pathname==="/join"){
+    res.writeHead(200,{...headers,"content-type":"text/html; charset=utf-8","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'"});
+    return res.end(joinPage(url));
+  }
   res.writeHead(200,{...headers,"content-type":"text/plain; charset=utf-8"});
-  res.end(`LiveVoz Stage Network v${PROTOCOL_VERSION}\nHealth: /health\nMetrics: /metrics\n`);
+  res.end(`LiveVoz Stage Network v${PROTOCOL_VERSION}\nHealth: /health\nMetrics: /metrics\nJoin: /join\n`);
 });
 
 const wss=new WebSocketServer({server,maxPayload:MAX_MESSAGE_BYTES,perMessageDeflate:false,clientTracking:true});
@@ -79,7 +99,7 @@ wss.on("connection",(ws,req)=>{
   ws.livevozRoom=roomId; ws.livevozDevice=device; ws.livevozRole=role; ws.livevozIp=ip; ws.isAlive=true; ws.lastSeen=now();
   room.clients.add(ws); room.updatedAt=now(); incIp(ip); metrics.connections++;
 
-  send(ws,{type:"WELCOME",payload:{protocol:PROTOCOL_VERSION,roomId,serverTime:now(),compatible:!protocol || protocol.startsWith("12") || protocol.startsWith("11")},timestamp:now(),messageId:`server:${crypto.randomUUID()}`,senderId:"server",senderRole:"server",roomId});
+  send(ws,{type:"WELCOME",payload:{protocol:PROTOCOL_VERSION,roomId,serverTime:now(),compatible:!protocol || protocol.startsWith("13") || protocol.startsWith("12") || protocol.startsWith("11")},timestamp:now(),messageId:`server:${crypto.randomUUID()}`,senderId:"server",senderRole:"server",roomId});
   if(room.lastState)send(ws,room.lastState);
 
   ws.on("pong",()=>{ws.isAlive=true;ws.lastSeen=now();});
