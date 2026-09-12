@@ -53,11 +53,62 @@ function roomSummary(){
   }));
 }
 
-function joinPage(url){
-  const room=escapeHtml(url.searchParams.get("room")||"livevoz-stage");
-  const token=escapeHtml(url.searchParams.get("token")||"");
-  const wsUrl=`ws://${escapeHtml(url.host)}/?room=${encodeURIComponent(room)}&token=${encodeURIComponent(token)}`;
-  return `<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LiveVoz Stage</title><style>body{margin:0;background:#07090d;color:#fff;font-family:system-ui;display:grid;place-items:center;min-height:100vh}.c{width:min(92vw,520px);background:#11151d;border:1px solid #2a3341;border-radius:18px;padding:24px}h1{margin-top:0}code{display:block;padding:12px;background:#080b10;border-radius:10px;word-break:break-all;color:#9fc1ff}.ok{color:#60d69a}.m{color:#9ca7ba}</style><div class="c"><h1>LiveVoz Stage</h1><p class="ok">Invitación válida para conectarte al escenario.</p><p><b>Sala:</b> ${room}</p><p><b>PIN:</b> ${token || "Sin PIN"}</p><p class="m">En LiveVoz del teléfono usa esta dirección Stage Network:</p><code>${wsUrl}</code><p class="m">Mantén esta pantalla disponible mientras configuras tu dispositivo.</p></div></html>`;
+function joinPage(){
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07090d">
+<title>LiveVoz Stage Mobile</title>
+<style>
+:root{color-scheme:dark;--bg:#07090d;--panel:#11151d;--line:#283142;--muted:#9ca7ba;--ok:#60d69a;--bad:#ff6f7d;--accent:#2f78ff;--yellow:#f1c40f}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;min-height:100vh}.wrap{width:min(94vw,620px);margin:auto;padding:26px 0 40px}.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)}h1{margin:0 0 8px;font-size:clamp(2rem,8vw,3rem)}.sub{color:var(--muted);margin:0 0 20px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}.box{background:#090d13;border:1px solid #222c3a;border-radius:12px;padding:12px}.box small{display:block;color:var(--muted);font-size:.72rem}.box b{display:block;margin-top:4px;word-break:break-word}label{display:block;color:#c8d0dd;font-size:.82rem;margin:14px 0 6px}input,select{width:100%;background:#090d13;color:#fff;border:1px solid #303b4d;border-radius:11px;padding:13px;font:inherit}button{width:100%;border:0;border-radius:12px;padding:14px;font:800 1rem system-ui;cursor:pointer;margin-top:16px;background:var(--accent);color:#fff}.secondary{background:#1b2330;border:1px solid #344054}.status{margin-top:16px;padding:12px;border-radius:11px;background:#0a0f16;color:var(--muted);border:1px solid #252f3d}.status.ok{color:var(--ok);border-color:#275b46}.status.bad{color:var(--bad);border-color:#63323a}.hidden{display:none}.live{min-height:68vh;display:flex;flex-direction:column}.topline{display:flex;align-items:center;justify-content:space-between;gap:12px}.badge{font-size:.72rem;padding:6px 9px;border-radius:999px;background:#0b3426;color:var(--ok)}.song{margin:auto 0;text-align:center}.song small{color:var(--muted);text-transform:uppercase;letter-spacing:.14em}.song h2{font-size:clamp(2rem,10vw,4rem);margin:12px 0}.line{font-size:clamp(1.5rem,7vw,2.6rem);color:var(--yellow);font-weight:900;margin-top:18px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:20px}.stat{background:#090d13;border:1px solid #222c3a;border-radius:10px;padding:10px;text-align:center}.stat small{display:block;color:var(--muted);font-size:.65rem}.stat b{display:block;margin-top:4px}.hint{color:var(--muted);font-size:.78rem;margin-top:14px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="card" id="joinView">
+    <h1>LiveVoz Stage</h1>
+    <p class="sub">Conéctate directamente al escenario desde tu teléfono.</p>
+    <div class="meta"><div class="box"><small>Sala</small><b id="roomText">—</b></div><div class="box"><small>PIN</small><b id="pinText">—</b></div></div>
+    <label for="name">Tu nombre</label>
+    <input id="name" maxlength="60" placeholder="Ej. Carlos">
+    <label for="role">Vista / rol</label>
+    <select id="role"><option value="singer">🎤 Cantante</option><option value="musician">🎸 Músico</option><option value="hybrid">🎼 Letra + acordes</option></select>
+    <button id="joinBtn">Entrar al escenario</button>
+    <div class="status" id="status">Listo para conectar.</div>
+  </section>
+
+  <section class="card live hidden" id="liveView">
+    <div class="topline"><div><b>LiveVoz Stage</b><div style="color:var(--muted);font-size:.75rem" id="identity"></div></div><span class="badge" id="liveBadge">CONECTADO</span></div>
+    <div class="song"><small id="concertName">Concierto</small><h2 id="songTitle">Esperando al operador…</h2><div class="line" id="lineText">La información del escenario aparecerá aquí.</div></div>
+    <div class="stats"><div class="stat"><small>Tono</small><b id="keyText">—</b></div><div class="stat"><small>BPM</small><b id="bpmText">—</b></div><div class="stat"><small>Línea</small><b id="lineIndex">—</b></div></div>
+    <button class="secondary" id="leaveBtn">Salir del escenario</button><div class="hint">Mantén esta pantalla abierta durante la presentación.</div>
+  </section>
+</div>
+<script>
+(()=>{
+  const q=new URLSearchParams(location.search);const room=q.get('room')||'livevoz-stage';const token=q.get('token')||'';
+  const $=id=>document.getElementById(id);$('roomText').textContent=room;$('pinText').textContent=token||'Sin PIN';
+  let ws=null,seq=0;const savedName=localStorage.getItem('livevoz_mobile_name')||'';const savedRole=localStorage.getItem('livevoz_mobile_role')||'singer';$('name').value=savedName;$('role').value=savedRole;
+  const deviceId=localStorage.getItem('livevoz_mobile_device')||('mobile-'+Math.random().toString(36).slice(2,10));localStorage.setItem('livevoz_mobile_device',deviceId);
+  function status(text,kind=''){const el=$('status');el.textContent=text;el.className='status '+kind;}
+  function envelope(type,payload,role){return{type,payload,messageId:deviceId+':'+Date.now().toString(36)+':'+(++seq),senderId:deviceId,senderRole:role,roomId:room,timestamp:Date.now(),sequence:seq,version:'13.0'};}
+  function send(type,payload,role){if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(envelope(type,payload,role)));}
+  function renderState(p){if(!p||typeof p!=='object')return;$('concertName').textContent=p.concertName||'Concierto';$('songTitle').textContent=p.songTitle||p.title||(p.songIndex!=null?'Canción '+(Number(p.songIndex)+1):'En vivo');$('lineText').textContent=p.lineText||p.lyric||'Sin texto recibido todavía';$('keyText').textContent=p.key||'—';$('bpmText').textContent=p.bpm||'—';$('lineIndex').textContent=Number.isInteger(p.lineIndex)?String(p.lineIndex+1):'—';}
+  function showLive(name,role){$('joinView').classList.add('hidden');$('liveView').classList.remove('hidden');$('identity').textContent=name+' · '+role;}
+  function showJoin(){ $('liveView').classList.add('hidden');$('joinView').classList.remove('hidden'); }
+  function connect(){const name=$('name').value.trim();const role=$('role').value;if(!name){status('Escribe tu nombre para entrar.','bad');return;}localStorage.setItem('livevoz_mobile_name',name);localStorage.setItem('livevoz_mobile_role',role);status('Conectando…');const proto=location.protocol==='https:'?'wss:':'ws:';const endpoint=new URL(proto+'//'+location.host+'/');endpoint.searchParams.set('room',room);endpoint.searchParams.set('token',token);endpoint.searchParams.set('device',deviceId);endpoint.searchParams.set('role',role);endpoint.searchParams.set('v','13.0');try{ws=new WebSocket(endpoint.toString());}catch(e){status('No se pudo abrir Stage Network.','bad');return;}
+    ws.onopen=()=>{status('Conectado.','ok');showLive(name,role);send('DEVICE_JOIN',{deviceId,name,role},role);};
+    ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='STATE')renderState(m.payload);if(m.type==='WELCOME')$('liveBadge').textContent='CONECTADO';}catch(_e){}};
+    ws.onerror=()=>status('Error de conexión con Stage Network.','bad');
+    ws.onclose=e=>{ws=null;$('liveBadge').textContent='DESCONECTADO';if(e.code===4001)status('PIN incorrecto o sala no válida. Genera un QR nuevo.','bad');else status('Se perdió la conexión. Puedes volver a entrar.','bad');showJoin();};
+  }
+  $('joinBtn').onclick=connect;$('leaveBtn').onclick=()=>{const role=$('role').value;send('DEVICE_LEAVE',{deviceId},role);try{ws&&ws.close(1000,'mobile-leave');}catch(_e){}ws=null;showJoin();status('Desconectado.');};
+})();
+</script>
+</body>
+</html>`;
 }
 
 const server=http.createServer((req,res)=>{
@@ -72,8 +123,8 @@ const server=http.createServer((req,res)=>{
     return res.end(JSON.stringify({...metrics,uptimeSeconds:Math.round((now()-metrics.startTime)/1000),activeRooms:roomSummary()}));
   }
   if(url.pathname==="/join"){
-    res.writeHead(200,{...headers,"content-type":"text/html; charset=utf-8","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'"});
-    return res.end(joinPage(url));
+    res.writeHead(200,{...headers,"content-type":"text/html; charset=utf-8","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src ws: wss:; img-src data:"});
+    return res.end(joinPage());
   }
   res.writeHead(200,{...headers,"content-type":"text/plain; charset=utf-8"});
   res.end(`LiveVoz Stage Network v${PROTOCOL_VERSION}\nHealth: /health\nMetrics: /metrics\nJoin: /join\n`);
