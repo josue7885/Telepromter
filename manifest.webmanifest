@@ -1,9 +1,9 @@
 {
   "name": "LiveVoz Teleprompter",
   "short_name": "LiveVoz",
-  "description": "Teleprompter profesional para conciertos con letras, acordes y Stage Network.",
-  "lang": "es-MX",
-  "start_url": "./teleprompter.html?role=operator",
+  "description": "Teleprompter profesional para conciertos con Supabase Cloud y Stage Network.",
+  "lang": "es-SV",
+  "start_url": "./teleprompter-v11.html?role=operator",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "any",
