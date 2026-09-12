@@ -1,0 +1,21 @@
+{
+  "name": "LiveVoz Teleprompter",
+  "short_name": "LiveVoz",
+  "description": "Teleprompter profesional para conciertos con letras, acordes y Stage Network.",
+  "lang": "es-MX",
+  "start_url": "./teleprompter.html?role=operator",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "categories": ["music", "productivity", "entertainment"],
+  "icons": [
+    {
+      "src": "./livevoz-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<meta name="color-scheme" content="dark">
+<meta name="author" content="JOSUE ALEXIS CHAVEZ GUEVARA">
+<meta name="copyright" content="© 2026 JOSUE ALEXIS CHAVEZ GUEVARA">
+<link rel="icon" type="image/png" href="livevoz-logo.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="livevoz-logo.png">
+<title>LiveVoz Teleprompter</title>
+<style>
+:root{
+  --bg:#050505;--panel:#101010;--panel2:#171717;--panel3:#202020;--border:#303030;
+  --yellow:#f1c40f;--green:#2ecc71;--red:#e74c3c;--blue:#3498db;--orange:#e67e22;--purple:#9b59b6;
+  --text:#f5f5f5;--muted:#888;--focus-size:1;--ui-scale:1;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text)}
+body{display:flex;flex-direction:column;touch-action:manipulation}
+button,input,textarea,select{font:inherit}
+button{-webkit-tap-highlight-color:transparent;user-select:none}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
+header{min-height:68px;background:#000;border-bottom:1px solid #292929;display:flex;justify-content:space-between;align-items:center;padding:10px 18px;gap:12px;z-index:50}
+.brand{display:flex;align-items:center;gap:10px;min-width:240px}
+.brand-logo{width:42px;height:42px;border-radius:10px;display:block;object-fit:cover;background:#fff;border:1px solid #333;box-shadow:0 0 18px rgba(44,112,255,.2)}
+.brand-title{font-size:1rem;font-weight:850;letter-spacing:.4px}
+.brand-sub{font-size:.65rem;color:var(--muted);margin-top:2px}
+.network-top{display:flex;align-items:center;gap:8px;font-size:.72rem;margin-left:14px}
+.network-dot{width:9px;height:9px;border-radius:50%;background:var(--red)}
+.network-dot.online{background:var(--green);box-shadow:0 0 10px var(--green)}
+.network-label{color:var(--muted)}
+.role-selector{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.role-btn,.small-btn,.category-btn,.stage-btn{border:1px solid #333;cursor:pointer;transition:.15s}
+.role-btn{background:#171717;color:#999;border-radius:7px;padding:8px 12px;font-size:.78rem;font-weight:700}
+.role-btn:hover,.small-btn:hover,.category-btn:hover,.stage-btn:hover{background:#252525;color:#fff}
+.role-btn.active{background:var(--yellow);color:#000;border-color:var(--yellow)}
+.main-container{flex:1;min-height:0;position:relative;overflow:hidden}
+.view-panel{display:none;width:100%;height:100%;overflow:auto}
+.view-panel.active{display:flex}
+#view-singer{background:#000;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:30px;position:relative}
+.stage-song-badge{position:absolute;top:18px;left:18px;right:18px;display:flex;justify-content:space-between;gap:10px;color:#777;font-size:.7rem;text-transform:uppercase;letter-spacing:1px}
+.lyric-line{font-size:clamp(1.5rem,4vw,2.8rem);margin:14px 0;color:#777;font-weight:750;text-transform:uppercase;letter-spacing:1px;transition:.2s;max-width:1200px;padding:0 12px}
+.lyric-line.highlight{color:var(--yellow);transform:scale(1.05);text-shadow:0 0 25px rgba(241,196,15,.28)}
+.stage-footer-controls{position:absolute;bottom:18px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#view-musician{background:#0b0b0b;justify-content:center;align-items:center;padding:30px}
+.chord-card{width:min(900px,92%);background:linear-gradient(145deg,#171717,#0e0e0e);border:1px solid #333;border-radius:20px;padding:clamp(25px,5vw,55px);text-align:center;box-shadow:0 25px 60px rgba(0,0,0,.6)}
+.section-label{color:var(--muted);font-size:.8rem;letter-spacing:2px;margin-bottom:14px}
+.chords-display{font-family:"Courier New",monospace;color:var(--green);font-size:clamp(2rem,7vw,4.5rem);font-weight:900;letter-spacing:3px;margin-bottom:20px;overflow-wrap:anywhere}
+.musician-preview{color:#eee;font-size:1.05rem;max-width:850px;margin:auto}
+.cue-alert{margin-top:25px;padding:16px;border-left:4px solid var(--yellow);background:rgba(241,196,15,.08);color:var(--yellow);text-align:left;border-radius:0 10px 10px 0;font-weight:700}
+#view-hybrid{background:#080808;flex-direction:column;align-items:center;padding:25px;gap:20px}
+.hybrid-top-bar{width:min(900px,100%);background:#141414;border:1px solid #333;border-left:4px solid var(--green);border-radius:12px;padding:15px 25px;display:flex;justify-content:space-between;align-items:center;gap:18px}
+.hybrid-chords{font-family:monospace;color:var(--green);font-size:clamp(1.7rem,5vw,2.6rem);font-weight:900}
+.hybrid-lyrics-container{flex:1;width:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.hybrid-line{font-size:clamp(1.1rem,3vw,1.8rem);margin:9px 0;color:#777;text-transform:uppercase;max-width:1000px;padding:0 12px}
+.hybrid-line.highlight{color:var(--yellow);font-size:clamp(1.6rem,4vw,2.7rem);font-weight:900;text-shadow:0 0 20px rgba(241,196,15,.3)}
+#view-operator{background:radial-gradient(circle at top right,#181818 0,#101010 35%,#0b0b0b 75%);padding:14px;display:none;flex-direction:column;gap:12px;overflow:hidden}
+#view-operator.active{display:flex}
+.operator-toolbar{min-height:58px;background:#111;border:1px solid #2c2c2c;border-radius:12px;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;gap:10px;flex-shrink:0}
+.live-title{display:flex;align-items:center;gap:9px;min-width:0}
+.live-badge{padding:5px 8px;border-radius:5px;background:var(--red);color:#fff;font-size:.65rem;font-weight:900;letter-spacing:1px;white-space:nowrap}
+.live-badge.ready{background:var(--green);color:#000}
+.current-show{font-size:.9rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.current-show small{display:block;color:var(--muted);font-size:.65rem;margin-top:2px}
+.toolbar-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.operator-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(240px,.9fr) minmax(320px,1.35fr) minmax(280px,1fr);gap:12px;overflow:hidden}
+.operator-column{min-width:0;min-height:0;background:linear-gradient(160deg,#161616,#101010);border:1px solid #2b2b2b;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.column-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;border-bottom:1px solid #2b2b2b;gap:8px}
+.column-header h3{color:#eee;font-size:.85rem}
+.column-header span{color:var(--muted);font-size:.65rem}
+.category-tabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
+.category-tabs::-webkit-scrollbar{display:none}
+.category-btn{flex-shrink:0;background:#1b1b1b;color:#888;border-radius:6px;padding:7px 10px;font-size:.68rem;font-weight:700}
+.category-btn.active{background:var(--yellow);border-color:var(--yellow);color:#000}
+.setlist-container,.devices-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:3px}
+.setlist-item{background:#1a1a1a;border:1px solid transparent;border-left:4px solid #333;padding:11px;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;transition:.15s}
+.setlist-item:hover{background:#242424}
+.setlist-item.selected{background:#242424;border-color:#353535;border-left-color:var(--green);box-shadow:inset 0 0 20px rgba(46,204,113,.04)}
+.song-info{min-width:0}
+.song-number{color:var(--muted);font-size:.62rem}
+.song-name{color:#eee;font-size:.78rem;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.song-meta{color:#666;font-size:.6rem;margin-top:3px}
+.song-actions{display:flex;gap:3px}
+.icon-btn{width:30px;height:30px;border-radius:6px;background:#222;color:#ddd;border:1px solid #333;cursor:pointer}
+.stage-controls{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:7px}
+.stage-btn{min-height:55px;background:#222;border-radius:9px;color:#eee;font-weight:850;padding:8px}
+.stage-btn:active,.small-btn:active,.role-btn:active,.category-btn:active{transform:scale(.97)}
+.stage-btn.primary{background:var(--green);border-color:var(--green);color:#000}
+.stage-btn.danger{background:#3a1717;border-color:#6d2424;color:#ff8585}
+.stage-btn.emergency{background:linear-gradient(135deg,#c0392b,#e74c3c);border-color:#ff6255;color:#fff;font-size:1rem;box-shadow:0 0 20px rgba(231,76,60,.13)}
+.current-line-card{background:#090909;border:1px solid #292929;border-radius:9px;padding:13px;text-align:center}
+.current-line-label{color:#666;font-size:.6rem;text-transform:uppercase;letter-spacing:1.5px}
+.current-line-text{color:var(--yellow);font-size:clamp(1.1rem,2vw,1.7rem);font-weight:900;margin-top:6px;overflow-wrap:anywhere}
+.current-cue{color:var(--green);font-size:.7rem;margin-top:5px}
+.stage-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stat-box{background:#090909;border:1px solid #292929;border-radius:8px;padding:8px;text-align:center}
+.stat-label{font-size:.55rem;color:#666;text-transform:uppercase}
+.stat-value{font-size:.85rem;font-weight:800;margin-top:3px}
+.network-panel{display:flex;flex-direction:column;gap:7px;min-height:0}
+.network-status-card{background:#0b0b0b;border:1px solid #292929;border-radius:8px;padding:9px;display:flex;justify-content:space-between;align-items:center}
+.connection-state{display:flex;align-items:center;gap:7px;font-size:.72rem}
+.connection-light{width:8px;height:8px;border-radius:50%;background:var(--red)}
+.connection-light.online{background:var(--green);box-shadow:0 0 8px var(--green)}
+.network-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.small-btn{background:#1d1d1d;color:#ddd;border-radius:7px;padding:8px;font-size:.68rem;font-weight:700}
+.small-btn.active{background:var(--green);color:#000}
+.device-card{background:#1a1a1a;border:1px solid #292929;border-radius:8px;padding:9px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.device-main{display:flex;align-items:center;gap:8px;min-width:0}
+.device-avatar{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#252525;font-size:.85rem}
+.device-name{font-size:.72rem;font-weight:800}
+.device-role{color:#777;font-size:.58rem;margin-top:2px}
+.device-status{width:8px;height:8px;border-radius:50%;background:#555}
+.device-status.online{background:var(--green);box-shadow:0 0 8px var(--green)}
+.form-group{display:flex;flex-direction:column;gap:5px;font-size:.7rem}
+.form-group label{color:#888}
+input,textarea,select{width:100%;background:#191919;color:#fff;border:1px solid #333;border-radius:7px;padding:9px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 2px rgba(241,196,15,.08)}
+textarea{resize:vertical;min-height:70px}
+.editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}
+.modal-overlay.show{display:flex}
+.modal{width:min(720px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#191919,#0f0f0f);border:1px solid #3a3a3a;border-radius:16px;padding:22px;box-shadow:0 30px 100px rgba(0,0,0,.8)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px}
+.modal-header h2{font-size:1rem}
+.close-btn{background:#252525;border:1px solid #333;color:#fff;width:34px;height:34px;border-radius:7px;cursor:pointer;flex:none}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-section{margin-top:15px;padding-top:15px;border-top:1px solid #292929}
+.modal-actions{display:flex;gap:8px;margin-top:18px}
+.qr-area{display:flex;align-items:center;gap:20px;background:#090909;padding:15px;border-radius:10px;border:1px solid #292929}
+#qrCanvas{width:180px;height:180px;background:#fff;padding:8px;border-radius:8px}
+.qr-info{font-size:.72rem;color:#999;line-height:1.5}
+.qr-code-text{color:var(--yellow);word-break:break-all;margin-top:8px;font-family:monospace;font-size:.65rem}
+.countdown-overlay,.lock-overlay{position:fixed;inset:0;display:none;z-index:1900;text-align:center}
+.countdown-overlay{background:rgba(0,0,0,.94);flex-direction:column;align-items:center;justify-content:center}
+.countdown-overlay.show{display:flex}
+.countdown-number{font-size:clamp(7rem,25vw,16rem);font-weight:950;color:var(--yellow);line-height:.9;text-shadow:0 0 50px rgba(241,196,15,.25)}
+.countdown-song{margin-top:25px;font-size:1.1rem;color:#aaa}
+.lock-overlay{z-index:2000;background:rgba(0,0,0,.96);align-items:center;justify-content:center;flex-direction:column;padding:30px}
+.lock-overlay.show{display:flex}
+.lock-icon{font-size:4rem;margin-bottom:15px}
+.lock-overlay h2{font-size:1.3rem}
+.lock-overlay p{color:#777;margin-top:8px;font-size:.8rem}
+.toast-container{position:fixed;right:15px;bottom:70px;z-index:3000;display:flex;flex-direction:column;gap:7px}
+.toast{background:#1c1c1c;border:1px solid #333;border-left:4px solid var(--green);padding:10px 13px;border-radius:8px;min-width:220px;font-size:.72rem;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:toastIn .2s ease}
+.toast.warning{border-left-color:var(--yellow)} .toast.error{border-left-color:var(--red)} .toast.info{border-left-color:var(--blue)}
+@keyframes toastIn{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+footer{min-height:35px;background:#000;border-top:1px solid #222;display:flex;justify-content:space-between;align-items:center;padding:7px 15px;color:#666;font-size:.62rem}
+.status-indicator{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:5px;box-shadow:0 0 6px var(--green)}
+.empty-state{display:grid;place-items:center;min-height:120px;color:#666;text-align:center;font-size:.75rem;padding:20px}
+.copyright-watermark{position:fixed;right:14px;bottom:42px;z-index:60;color:rgba(255,255,255,.3);font-size:.56rem;letter-spacing:.35px;pointer-events:none;user-select:none;text-align:right}
+.copyright-watermark strong{color:rgba(255,255,255,.46);font-weight:800}
+.view-panel .copyright-watermark{bottom:18px;right:18px}
+@media(max-width:750px){.copyright-watermark{bottom:8px;right:8px;font-size:.48rem}.view-panel .copyright-watermark{bottom:8px;right:8px}}
+.hidden{display:none!important}
+@media(max-width:1100px){
+  .operator-grid{grid-template-columns:minmax(210px,.85fr) minmax(300px,1.2fr)}
+  .operator-column.network-column{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+}
+@media(max-width:750px){
+  header{min-height:auto;padding:8px;flex-direction:column;align-items:stretch}
+  .brand{justify-content:space-between;min-width:0}
+  .network-top{display:none}
+  .role-selector{width:100%;display:grid;grid-template-columns:repeat(4,1fr)}
+  .role-btn{padding:7px 4px;font-size:.62rem}
+  #view-operator{padding:7px;overflow:auto}
+  .operator-toolbar{flex-wrap:wrap}
+  .operator-grid{display:flex;flex-direction:column;overflow:visible}
+  .operator-column{min-height:340px}
+  .operator-column:nth-child(2){min-height:500px}
+  .network-column{min-height:360px!important;display:flex!important}
+  footer{display:none}
+  .modal-grid,.editor-grid{grid-template-columns:1fr}
+  .qr-area{flex-direction:column;text-align:center}
+  .stage-song-badge{top:10px;left:10px;right:10px}
+}
+@media(max-height:500px) and (orientation:landscape){
+  header{min-height:50px;padding:5px 10px}
+  .brand-logo{width:30px;height:30px}
+  .role-btn{padding:5px 8px}
+  footer{min-height:28px}
+}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:#0c0c0c}::-webkit-scrollbar-thumb{background:#333;border-radius:20px}::-webkit-scrollbar-thumb:hover{background:#555}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img class="brand-logo" src="livevoz-logo.png" alt="LiveVoz">
+    <div>
+      <div class="brand-title">LiveVoz Teleprompter</div>
+      <div class="brand-sub">V10 · STAGE NETWORK · MODO EN VIVO</div>
+    </div>
+    <div class="network-top"><span id="network-dot" class="network-dot"></span><span id="network-label" class="network-label">Modo local</span></div>
+  </div>
+  <div class="role-selector">
+    <button id="install-app-btn" class="role-btn hidden" onclick="installApp()">⬇ Instalar</button>
+    <button class="role-btn active" data-role="singer" onclick="switchRole('singer')">🎤 Cantante</button>
+    <button class="role-btn" data-role="musician" onclick="switchRole('musician')">🎸 Músico</button>
+    <button class="role-btn" data-role="hybrid" onclick="switchRole('hybrid')">🎸🎤 Híbrido</button>
+    <button class="role-btn" data-role="operator" onclick="switchRole('operator')">🎛 Operador</button>
+  </div>
+</header>
+
+<main class="main-container">
+  <section id="view-singer" class="view-panel active">
+    <div class="stage-song-badge"><span id="singer-show">Concierto</span><span id="singer-song">Sin canción</span></div>
+    <div class="lyric-line" id="s-line-0">---</div>
+    <div class="lyric-line highlight" id="s-line-1">Selecciona una canción</div>
+    <div class="lyric-line" id="s-line-2">---</div>
+    <div class="stage-footer-controls">
+      <button id="mic-singer-btn" class="stage-btn" onclick="toggleVoiceControl()">🎤 Activar reconocimiento</button>
+      <button class="stage-btn" onclick="toggleFullscreen()">⛶ Pantalla</button>
+      <button class="stage-btn" onclick="toggleWakeLock()">📱 Mantener pantalla</button>
+    </div>
+  </section>
+
+  <section id="view-musician" class="view-panel">
+    <div class="chord-card">
+      <div class="section-label" id="musician-section">ESTRUCTURA</div>
+      <div class="chords-display" id="musician-chords">---</div>
+      <div class="musician-preview" id="musician-lyrics-preview">Letra de referencia</div>
+      <div class="cue-alert" id="musician-cue">⚡ Esperando sincronización...</div>
+      <div class="stage-footer-controls" style="position:static;margin-top:22px">
+        <button class="stage-btn" onclick="toggleFullscreen()">⛶ Pantalla</button>
+        <button class="stage-btn" onclick="toggleWakeLock()">📱 Mantener pantalla</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-hybrid" class="view-panel">
+    <div class="hybrid-top-bar">
+      <div><div class="section-label" id="hybrid-section">SECCIÓN</div><div class="hybrid-chords" id="hybrid-chords">---</div></div>
+      <div id="hybrid-cue" style="color:var(--yellow);font-weight:800;font-size:.75rem">⚡ LISTO</div>
+    </div>
+    <div class="hybrid-lyrics-container">
+      <div class="hybrid-line" id="h-line-0">---</div>
+      <div class="hybrid-line highlight" id="h-line-1">Toca y canta en tiempo real</div>
+      <div class="hybrid-line" id="h-line-2">---</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+      <button id="mic-hybrid-btn" class="stage-btn" onclick="toggleVoiceControl()">🎤 Activar reconocimiento</button>
+      <button class="stage-btn" onclick="toggleFullscreen()">⛶ Pantalla</button>
+    </div>
+  </section>
+
+  <section id="view-operator" class="view-panel">
+    <div class="operator-toolbar">
+      <div class="live-title">
+        <span id="live-badge" class="live-badge ready">READY</span>
+        <div style="min-width:0">
+          <div id="operator-show-title" class="current-show">Sin concierto seleccionado</div>
+          <small id="operator-song-title">Selecciona una canción</small>
+        </div>
+      </div>
+      <div class="toolbar-actions">
+        <button class="small-btn" onclick="openConcertManager()">📋 Conciertos</button>
+        <button class="small-btn" onclick="openNetworkModal()">📡 Red</button>
+        <button class="small-btn" onclick="openDisplaySettings()">🖥️ Pantalla</button>
+        <button class="small-btn" onclick="openStageWindow('singer')">↗ Cantante</button>
+        <button class="small-btn" onclick="openStageWindow('musician')">↗ Músico</button>
+        <button class="small-btn" onclick="openStageWindow('hybrid')">↗ Híbrido</button>
+        <button class="small-btn" onclick="toggleLock()">🔒 Bloquear</button>
+      </div>
+    </div>
+
+    <div class="operator-grid">
+      <div class="operator-column">
+        <div class="column-header"><h3>📚 Biblioteca</h3><span id="song-count">0 canciones</span></div>
+        <div class="category-tabs">
+          <button class="category-btn active" onclick="filterCategory('Todos',this)">Todos</button>
+          <button class="category-btn" onclick="filterCategory('Banda',this)">Banda</button>
+          <button class="category-btn" onclick="filterCategory('Norteño',this)">Norteño</button>
+          <button class="category-btn" onclick="filterCategory('Cumbia',this)">Cumbia</button>
+          <button class="category-btn" onclick="filterCategory('Serenata',this)">Serenata</button>
+          <button class="category-btn" onclick="filterCategory('Personalizada',this)">Personal</button>
+        </div>
+        <input id="song-search" placeholder="🔎 Buscar canción..." autocomplete="off" oninput="renderSetlistUI()">
+        <div id="setlist-container-ui" class="setlist-container"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button class="small-btn" onclick="resetEditor()">＋ Nueva canción</button>
+          <button class="small-btn" onclick="duplicateCurrentSong()">⧉ Duplicar</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button class="small-btn" onclick="exportLibrary()">⬇ Exportar</button>
+          <button class="small-btn" onclick="document.getElementById('library-file-input').click()">⬆ Importar</button>
+        </div>
+        <input id="library-file-input" class="hidden" type="file" accept="application/json" onchange="importLibrary(event)">
+      </div>
+
+      <div class="operator-column">
+        <div class="column-header"><h3>🎛 Control de Escenario</h3><span id="line-counter">Línea 1 / 1</span></div>
+        <div class="current-line-card">
+          <div class="current-line-label">Ahora</div>
+          <div id="operator-current-line" class="current-line-text">---</div>
+          <div id="operator-current-cue" class="current-cue">---</div>
+          <input id="line-slider" type="range" min="0" max="0" value="0" aria-label="Posición de línea" oninput="jumpToLine(Number(this.value))">
+        </div>
+        <div class="stage-stat-grid">
+          <div class="stat-box"><div class="stat-label">BPM</div><div class="stat-value" id="stat-bpm">100</div></div>
+          <div class="stat-box"><div class="stat-label">Tono</div><div class="stat-value" id="stat-key">C</div></div>
+          <div class="stat-box"><div class="stat-label">Avance</div><div class="stat-value" id="stat-progress">0%</div></div>
+        </div>
+        <div class="stage-controls">
+          <button class="stage-btn" onclick="prevLine()">⟵<br>Anterior</button>
+          <button class="stage-btn primary" onclick="nextLine()">SIGUIENTE<br><small>ESPACIO / →</small></button>
+          <button class="stage-btn" onclick="repeatLine()">↻<br>Repetir</button>
+        </div>
+        <button class="stage-btn emergency" onclick="goToChorus()">🚨 EMERGENCIA · IR AL CORO</button>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px">
+          <button class="small-btn" onclick="jumpToMarker('INTRO')">INTRO</button>
+          <button class="small-btn" onclick="jumpToMarker('VERSO')">VERSO</button>
+          <button class="small-btn" onclick="jumpToMarker('CORO')">CORO</button>
+          <button class="small-btn" onclick="jumpToMarker('SOLO')">SOLO</button>
+          <button class="small-btn" onclick="jumpToMarker('FINAL')">FINAL</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+          <button class="small-btn" onclick="startSongCountdown()">⏱ Cuenta regresiva</button>
+          <button class="small-btn" onclick="toggleVoiceControl()">🎤 Voz</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+          <button id="auto-advance-btn" class="small-btn" onclick="toggleAutoAdvance()">▶ Auto avance</button>
+          <button class="small-btn" onclick="sendStagePing()">📣 Avisar escenario</button>
+        </div>
+        <div class="editor-grid">
+          <div class="form-group"><label>BPM</label><input id="bpm-input" type="number" min="30" max="250" step="1" value="100" onchange="setBPM(this.value)"></div>
+          <div class="form-group"><label>Tonalidad</label><select id="key-select" onchange="setKey(this.value)"></select></div>
+        </div>
+        <div class="editor-grid">
+          <button class="small-btn" onclick="transposeSemitone(-1)">♭ Bajar tono</button>
+          <button class="small-btn" onclick="transposeSemitone(1)">♯ Subir tono</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+          <button class="small-btn" onclick="previousSong()">⏮ Canción anterior</button>
+          <button class="small-btn" onclick="nextSong()">⏭ Canción siguiente</button>
+        </div>
+      </div>
+
+      <div class="operator-column network-column">
+        <div class="column-header"><h3>📡 Stage Network</h3><span id="network-room-label">Sala</span></div>
+        <div class="network-panel">
+          <div class="network-status-card">
+            <div class="connection-state"><span id="connection-light" class="connection-light"></span><span id="connection-text">Modo local</span></div>
+            <strong id="device-count">1</strong>
+          </div>
+          <div class="network-actions">
+            <button class="small-btn" onclick="openNetworkModal()">⚙ Configurar</button>
+            <button class="small-btn" onclick="generateConnectionQR()">QR Conexión</button>
+          </div>
+        </div>
+        <div class="column-header"><h3>👥 Dispositivos</h3><span>ONLINE</span></div>
+        <div id="devices-list" class="devices-list"></div>
+
+        <div class="column-header"><h3>💾 Canción / Edición</h3><span id="edit-mode-label">Nueva</span></div>
+        <div class="form-group"><label>Título</label><input id="edit-title" placeholder="Nombre de la canción"></div>
+        <div class="form-group"><label>Categoría</label><select id="edit-category"><option>Banda</option><option>Norteño</option><option>Cumbia</option><option>Serenata</option><option>Personalizada</option></select></div>
+        <div class="editor-grid">
+          <div class="form-group"><label>BPM</label><input id="edit-bpm" type="number" min="30" max="250" step="1" value="100"></div>
+          <div class="form-group"><label>Tonalidad</label><select id="edit-key"></select></div>
+        </div>
+        <div class="form-group"><label>Letra / líneas</label><textarea id="edit-lyrics" placeholder="Una línea por cada avance"></textarea></div>
+        <div class="form-group"><label>Acordes por línea</label><textarea id="edit-chords" placeholder="C - G - Am - F"></textarea></div>
+        <div class="form-group"><label>Cue / Marcadores</label><textarea id="edit-cues" placeholder="INTRO
+VERSO
+CORO"></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+          <button class="small-btn active" onclick="saveSongChanges()">💾 Guardar</button>
+          <button class="small-btn" onclick="resetEditor()">✕ Cancelar</button>
+        </div>
+        <button class="small-btn" onclick="deleteCurrentSong()">🗑 Eliminar canción</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div><span class="status-indicator"></span>LiveVoz Stage Network V10 · listo para escenario</div>
+  <div id="footer-song">Sin canción</div>
+</footer>
+
+<div id="network-modal" class="modal-overlay" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-header"><h2>📡 Configuración Stage Network</h2><button class="close-btn" onclick="closeModal('network-modal')">×</button></div>
+    <div class="modal-grid">
+      <div class="form-group"><label>Nombre del concierto</label><input id="concert-name-input" value="Concierto en Vivo"></div>
+      <div class="form-group"><label>Nombre de este dispositivo</label><input id="device-name-input" value="Operador"></div>
+    </div>
+    <div class="modal-section">
+      <div class="form-group"><label>Servidor WebSocket local (opcional)</label><input id="ws-url-input" placeholder="ws://192.168.1.100:8080"></div>
+      <p style="color:#777;font-size:.68rem;line-height:1.5;margin-top:7px">La aplicación sincroniza pestañas del mismo navegador mediante BroadcastChannel. Para teléfonos/tablets en la misma Wi‑Fi puedes usar un servidor WebSocket local y pegar su dirección aquí.</p>
+    </div>
+    <div class="modal-section">
+      <div class="qr-area">
+        <canvas id="qrCanvas" width="180" height="180"></canvas>
+        <div class="qr-info"><strong style="color:#fff">Código de conexión</strong><p>Genera un código para compartir los parámetros del dispositivo con otro equipo.</p><div id="qr-code-text" class="qr-code-text">Configura la red primero.</div></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="stage-btn primary" style="flex:1" onclick="connectWebSocket()">📡 Conectar</button>
+      <button class="stage-btn" style="flex:1" onclick="activateLocalMode()">🏠 Modo Local</button>
+    </div>
+  </div>
+</div>
+
+<div id="concert-modal" class="modal-overlay" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-header"><h2>📋 Gestión de conciertos</h2><button class="close-btn" onclick="closeModal('concert-modal')">×</button></div>
+    <div class="form-group"><label>Nombre del concierto</label><input id="new-concert-name" placeholder="Ej. Serenata 15 de Septiembre"></div>
+    <div id="concert-list" style="display:flex;flex-direction:column;gap:7px;margin-top:12px"></div>
+    <div class="modal-actions"><button class="stage-btn primary" onclick="createConcert()">＋ Crear concierto</button></div>
+  </div>
+</div>
+
+<div id="display-modal" class="modal-overlay" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-header"><h2>🖥️ Configuración de pantalla</h2><button class="close-btn" onclick="closeModal('display-modal')">×</button></div>
+    <div class="modal-grid">
+      <div class="form-group"><label>Tamaño de letra: <span id="font-size-label">100%</span></label><input id="font-size-range" type="range" min="80" max="150" value="100" oninput="setFontScale(this.value)"></div>
+      <div class="form-group"><label>Animación destacada</label><select id="highlight-style" onchange="saveDisplaySettings()"><option value="classic">Clásica</option><option value="strong">Grande</option><option value="minimal">Minimal</option></select></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-actions"><button class="small-btn" onclick="toggleFullscreen()">⛶ Pantalla completa</button><button class="small-btn" onclick="toggleWakeLock()">📱 Mantener pantalla</button><button class="small-btn" onclick="resetDisplaySettings()">↺ Restablecer</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="countdown-overlay" class="countdown-overlay"><div id="countdown-number" class="countdown-number">3</div><div id="countdown-song" class="countdown-song">Preparando canción...</div></div>
+<div id="lock-overlay" class="lock-overlay"><div class="lock-icon">🔒</div><h2>PANTALLA BLOQUEADA</h2><p>Toca dos veces para desbloquear.</p></div>
+<div id="toast-container" class="toast-container"></div>
+<div class="copyright-watermark">© 2026 <strong>JOSUE ALEXIS CHAVEZ GUEVARA</strong> · Todos los derechos reservados</div>
+
+<script>
+"use strict";
+
+/* ==========================================================
+   V10 STAGE NETWORK ENGINE
+========================================================== */
+const APP_VERSION = "10.0.0";
+const STORAGE_KEYS = {
+  playlist:"ctp_playlist_v10",
+  concerts:"ctp_concerts_v10",
+  deviceId:"ctp_device_id",
+  deviceName:"ctp_device_name",
+  concertName:"ctp_concert_name",
+  wsUrl:"ctp_ws_url",
+  display:"ctp_display_settings"
+};
+
+const requestedRole = new URLSearchParams(location.search).get("role");
+let currentRole = ["singer","musician","hybrid","operator"].includes(requestedRole)
+  ? requestedRole
+  : sessionStorage.getItem("ctp_role") || localStorage.getItem("ctp_role") || "singer";
+let currentSongIndex = 0;
+let currentLineIndex = 0;
+let editingIndex = -1;
+let currentCategory = "Todos";
+let bpm = 100;
+let isListening = false;
+let recognition = null;
+let recognitionStarting = false;
+let lastVoiceCommand = "";
+let lastVoiceCommandAt = 0;
+let networkMode = "local";
+let ws = null;
+let wsReconnectTimer = null;
+let wakeLock = null;
+let countdownTimer = null;
+let autoAdvanceTimer = null;
+let lockTapTimer = 0;
+let concerts = [];
+let currentConcertId = "default";
+let localChannel = null;
+let connectedDevices = [];
+let lastBroadcastSignature = "";
+let displaySettings = { fontScale:100, highlight:"classic" };
+
+const deviceId = sessionStorage.getItem(STORAGE_KEYS.deviceId) || "device-" + cryptoRandomId();
+sessionStorage.setItem(STORAGE_KEYS.deviceId, deviceId);
+let deviceName = localStorage.getItem(STORAGE_KEYS.deviceName) || "Operador";
+let concertName = localStorage.getItem(STORAGE_KEYS.concertName) || "Concierto en Vivo";
+
+/* ==========================================================
+   DEFAULT LIBRARY (preserved from V9)
+========================================================== */
+const DEFAULT_PLAYLIST = [
+
+    {
+        title:"El Sinaloense",
+        category:"Banda",
+
+        lyrics:[
+            "INTRO — Preparar banda",
+            "ENTRADA — Línea de prueba",
+            "VERSO — Prueba de teleprompter",
+            "CORO — Entrada de metales",
+            "BREAK — Preparar siguiente sección",
+            "CORO FINAL",
+            "FINAL — Golpe de banda"
+        ],
+
+        chords:[
+            "G - D7 - G",
+            "G - D7 - G",
+            "C - G - D7 - G",
+            "C - G - D7 - G",
+            "Em - C - D7",
+            "C - G - D7 - G",
+            "G"
+        ],
+
+        cues:[
+            "INTRO",
+            "VERSO",
+            "VERSO",
+            "CORO",
+            "BREAK",
+            "CORO",
+            "FINAL"
+        ],
+
+        transposeOffset:0,
+        bpm:110,
+        key:"G"
+    },
+
+
+    {
+        title:"Cielito Lindo",
+        category:"Serenata",
+
+        lyrics:[
+            "INTRO — Guitarra",
+            "VERSO — Entrada",
+            "VERSO — Segunda frase",
+            "CORO — Todos",
+            "SOLO — Instrumental",
+            "CORO FINAL",
+            "FINAL"
+        ],
+
+        chords:[
+            "G - D7 - G",
+            "G - C - D7 - G",
+            "G - C - D7 - G",
+            "C - G - D7 - G",
+            "Em - C - D7",
+            "C - G - D7 - G",
+            "G"
+        ],
+
+        cues:[
+            "INTRO",
+            "VERSO",
+            "VERSO",
+            "CORO",
+            "SOLO",
+            "CORO",
+            "FINAL"
+        ],
+
+        transposeOffset:0,
+        bpm:95,
+        key:"G"
+    },
+
+
+    {
+        title:"La Chona — Prueba de escenario",
+        category:"Norteño",
+
+        lyrics:[
+            "INTRO — Acordeón",
+            "VERSO — Entrada",
+            "VERSO — Segunda parte",
+            "CORO — Todos",
+            "BREAK — Acordeón",
+            "CORO FINAL",
+            "FINAL"
+        ],
+
+        chords:[
+            "E - B7 - E",
+            "E - A - B7 - E",
+            "E - A - B7 - E",
+            "A - E - B7 - E",
+            "E - B7",
+            "A - E - B7 - E",
+            "E"
+        ],
+
+        cues:[
+            "INTRO",
+            "VERSO",
+            "VERSO",
+            "CORO",
+            "SOLO",
+            "CORO",
+            "FINAL"
+        ],
+
+        transposeOffset:0,
+        bpm:125,
+        key:"E"
+    },
+
+
+    {
+        title:"Cumbia de Prueba",
+        category:"Cumbia",
+
+        lyrics:[
+            "INTRO — Percusión",
+            "VERSO — Bajo entra",
+            "VERSO — Teclado",
+            "CORO — Todos",
+            "BREAK — Percusión",
+            "CORO FINAL",
+            "FINAL"
+        ],
+
+        chords:[
+            "Am - G - F - E",
+            "Am - G - F - E",
+            "Am - G - F - E",
+            "F - G - Am",
+            "Am - G",
+            "F - G - Am",
+            "Am"
+        ],
+
+        cues:[
+            "INTRO",
+            "VERSO",
+            "VERSO",
+            "CORO",
+            "BREAK",
+            "CORO",
+            "FINAL"
+        ],
+
+        transposeOffset:0,
+        bpm:105,
+        key:"Am"
+    },
+
+
+    {
+        title:"Serenata Romántica — Demo",
+        category:"Serenata",
+
+        lyrics:[
+            "INTRO — Guitarra",
+            "VERSO — Voz principal",
+            "VERSO — Segunda parte",
+            "PRE-CORO",
+            "CORO — Todos",
+            "SOLO — Guitarra",
+            "CORO FINAL",
+            "FINAL"
+        ],
+
+        chords:[
+            "C - G - Am - F",
+            "C - G - Am - F",
+            "C - G - F - G",
+            "Am - Em - F - G",
+            "C - G - Am - F",
+            "Am - F - C - G",
+            "C - G - Am - F",
+            "C"
+        ],
+
+        cues:[
+            "INTRO",
+            "VERSO",
+            "VERSO",
+            "VERSO",
+            "CORO",
+            "SOLO",
+            "CORO",
+            "FINAL"
+        ],
+
+        transposeOffset:0,
+        bpm:80,
+        key:"C"
+    },
+    {
+        title:"Pop Latino — Demo",
+        category:"Personalizada",
+        lyrics:["INTRO — Base lista","VERSO — Entrada suave","PRE-CORO — Subir energía","CORO — Todos","PUENTE — Bajar dinámica","CORO FINAL","FINAL — Cierre"],
+        chords:["Am - F - C - G","Am - F - C - G","F - G - Am","C - G - Am - F","Am - G - F","C - G - Am - F","C"],
+        cues:["INTRO","VERSO","VERSO","CORO","BREAK","CORO","FINAL"],
+        transposeOffset:0,bpm:100,key:"Am"
+    },
+    {
+        title:"Rock en Vivo — Demo",
+        category:"Personalizada",
+        lyrics:["INTRO — Riff","VERSO — Banda completa","CORO — Abrir sonido","SOLO — Guitarra","CORO FINAL","FINAL — Golpe"],
+        chords:["E - A - D - E","E - A - E","A - E - D","E - A - D - E","A - E - D","E"],
+        cues:["INTRO","VERSO","CORO","SOLO","CORO","FINAL"],
+        transposeOffset:0,bpm:128,key:"E"
+    },
+    {
+        title:"Cumbia Tropical — Demo",
+        category:"Cumbia",
+        lyrics:["INTRO — Percusión","VERSO — Bajo y teclado","CORO — Todos","MAMBO — Metales","CORO FINAL","FINAL"],
+        chords:["Dm - C - Bb - A","Dm - C - Bb - A","F - C - Dm - Bb","Dm - C","F - C - Dm - Bb","Dm"],
+        cues:["INTRO","VERSO","CORO","SOLO","CORO","FINAL"],
+        transposeOffset:0,bpm:112,key:"Dm"
+    }
+
+];
+
+/* ==========================================================
+   SONG NORMALIZATION / STORAGE
+========================================================== */
+function cryptoRandomId(){
+  try {
+    if(window.crypto?.randomUUID) return crypto.randomUUID();
+  } catch(_e) {}
+  return Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+}
+
+function normalizeSong(song, index=0){
+  const source = song && typeof song === "object" ? song : {};
+  const lyrics = Array.isArray(source.lyrics) ? source.lyrics.map(v => String(v ?? "").trim()).filter(Boolean) : [];
+  const safeLyrics = lyrics.length ? lyrics : ["Nueva canción"];
+  const chords = Array.isArray(source.chords) ? source.chords.map(v => String(v ?? "").trim()) : [];
+  const cues = Array.isArray(source.cues) ? source.cues.map(v => String(v ?? "").trim()) : [];
+  const key = String(source.key || "C");
+  return {
+    id: source.id || "song-" + Date.now().toString(36) + "-" + index + "-" + Math.random().toString(36).slice(2,6),
+    title: String(source.title || "Canción sin título").trim() || "Canción sin título", 
+    category: String(source.category || "Personalizada"),
+    lyrics: safeLyrics,
+    chords: safeLyrics.map((_,i) => chords[i] || chords[0] || "C - G - Am - F"),
+    cues: safeLyrics.map((_,i) => cues[i] || cues[0] || "VERSO"),
+    transposeOffset: Number.isFinite(Number(source.transposeOffset)) ? Number(source.transposeOffset) : 0,
+    bpm: clampInt(source.bpm, 30, 250, 100),
+    key
+  };
+}
+
+function cloneDefaultPlaylist(){
+  return DEFAULT_PLAYLIST.map((song,i) => normalizeSong(song,i));
+}
+
+let playlist = loadPlaylist();
+
+function loadPlaylist(){
+  const raw = localStorage.getItem(STORAGE_KEYS.playlist);
+  if(!raw) {
+    const fresh = cloneDefaultPlaylist();
+    localStorage.setItem(STORAGE_KEYS.playlist, JSON.stringify(fresh));
+    return fresh;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if(!Array.isArray(parsed) || !parsed.length) throw new Error("Biblioteca vacía");
+    const loaded = parsed.map((song,i) => normalizeSong(song,i));
+    const titles = new Set(loaded.map(song => song.title.toLowerCase()));
+    DEFAULT_PLAYLIST.forEach((song,i) => {
+      const normalized = normalizeSong(song,loaded.length+i);
+      if(!titles.has(normalized.title.toLowerCase())) loaded.push(normalized);
+    });
+    localStorage.setItem(STORAGE_KEYS.playlist, JSON.stringify(loaded));
+    return loaded;
+  } catch(error) {
+    console.warn("Biblioteca dañada; se restaurará la base.", error);
+    const fresh = cloneDefaultPlaylist();
+    localStorage.setItem(STORAGE_KEYS.playlist, JSON.stringify(fresh));
+    showToast("Biblioteca restaurada por datos inválidos","warning");
+    return fresh;
+  }
+}
+
+function saveLibrary(){
+  try {
+    localStorage.setItem(STORAGE_KEYS.playlist, JSON.stringify(playlist));
+  } catch(error) {
+    showToast("No se pudo guardar la biblioteca. Exporta una copia de seguridad.","error");
+    console.error("Biblioteca:",error);
+  }
+}
+
+function migrateConcerts(rawConcerts){
+  const defaults = [{id:"default",name:"Concierto Demo",songIds:playlist.map(s => s.id)}];
+  if(!Array.isArray(rawConcerts) || !rawConcerts.length) return defaults;
+  return rawConcerts.map((concert,i) => {
+    const songIds = Array.isArray(concert.songIds)
+      ? concert.songIds.filter(id => playlist.some(s => s.id === id))
+      : Array.isArray(concert.songs)
+        ? concert.songs.map(index => playlist[index]?.id).filter(Boolean)
+        : playlist.map(s => s.id);
+    return {
+      id: concert.id || ("concert-" + Date.now().toString(36) + "-" + i),
+      name: String(concert.name || ("Concierto " + (i+1))),
+      songIds: concert.id === "default"
+        ? playlist.map(s => s.id)
+        : (songIds.length ? [...new Set(songIds)] : playlist.map(s => s.id))
+    };
+  });
+}
+
+function loadConcerts(){
+  const raw = localStorage.getItem(STORAGE_KEYS.concerts);
+  if(!raw) {
+    const defaults = migrateConcerts(null);
+    localStorage.setItem(STORAGE_KEYS.concerts, JSON.stringify(defaults));
+    return defaults;
+  }
+  try {
+    return migrateConcerts(JSON.parse(raw));
+  } catch(_e) {
+    return migrateConcerts(null);
+  }
+}
+
+concerts = loadConcerts();
+currentConcertId = localStorage.getItem("ctp_current_concert_id") || concerts[0]?.id || "default";
+
+function saveConcerts(){
+  try {
+    localStorage.setItem(STORAGE_KEYS.concerts, JSON.stringify(concerts));
+  } catch(error) {
+    showToast("No se pudieron guardar los conciertos","error");
+    console.error("Conciertos:",error);
+  }
+}
+
+function getCurrentConcert(){
+  return concerts.find(c => c.id === currentConcertId) || concerts[0] || null;
+}
+
+function getVisibleSongIndices(){
+  const concert = getCurrentConcert();
+  if(!concert) return playlist.map((_,i) => i);
+  return concert.songIds.map(id => playlist.findIndex(song => song.id === id)).filter(i => i >= 0);
+}
+
+function ensureCurrentSongVisible(){
+  const visible = getVisibleSongIndices();
+  if(!visible.length) {
+    currentSongIndex = 0;
+    return;
+  }
+  if(!visible.includes(currentSongIndex)) currentSongIndex = visible[0];
+}
+
+/* ==========================================================
+   LOCAL + WEBSOCKET NETWORK
+========================================================== */
+function initLocalNetwork(){
+  try {
+    if("BroadcastChannel" in window){
+      localChannel = new BroadcastChannel("concert-stage-network-v10");
+      localChannel.onmessage = event => {
+        handleNetworkMessage(event.data);
+      };
+      updateNetworkUI();
+      registerDevice({deviceId,name:deviceName,role:currentRole,online:true,lastSeen:Date.now()});
+    }
+  } catch(error) {
+    console.warn("BroadcastChannel no disponible:", error);
+  }
+}
+
+function broadcastMessage(message){
+  const envelope = {
+    ...message,
+    senderId:deviceId,
+    timestamp:Date.now(),
+    version:APP_VERSION
+  };
+  try { localChannel?.postMessage(envelope); } catch(error) { console.warn("BroadcastChannel:", error); }
+  if(ws && ws.readyState === WebSocket.OPEN){
+    try { ws.send(JSON.stringify(envelope)); } catch(error) { console.warn("WebSocket send:", error); }
+  }
+}
+
+function handleNetworkMessage(message){
+  if(!message || message.senderId === deviceId) return;
+  if(message.type === "STATE") applyRemoteState(message.payload);
+  else if(message.type === "COMMAND") executeRemoteCommand(message.payload);
+  else if(message.type === "PING") {
+    registerDevice({...message.payload, online:true,lastSeen:Date.now()});
+    broadcastMessage({
+      type:"PONG",
+      payload:{deviceId,name:deviceName,role:currentRole}
+    });
+  } else if(message.type === "PONG") {
+    registerDevice({...message.payload,online:true,lastSeen:Date.now()});
+  } else if(message.type === "DEVICE_JOIN") {
+    registerDevice({...message.payload,online:true,lastSeen:Date.now()});
+    broadcastMessage({
+      type:"STATE",
+      payload:getCurrentState()
+    });
+  } else if(message.type === "DEVICE_LEAVE") {
+    removeDevice(message.payload?.deviceId);
+  }
+}
+
+function getCurrentState(){
+  const song = playlist[currentSongIndex];
+  return {
+    songId:song?.id || null,
+    songIndex:currentSongIndex,
+    lineIndex:currentLineIndex,
+    bpm:song?.bpm || bpm,
+    key:song?.key || "C",
+    transposeOffset:song?.transposeOffset || 0,
+    concertId:currentConcertId,
+    concertName
+  };
+}
+
+function broadcastCurrentState(force=false){
+  const state = getCurrentState();
+  const signature = JSON.stringify(state);
+  if(!force && signature === lastBroadcastSignature) return;
+  lastBroadcastSignature = signature;
+  broadcastMessage({type:"STATE",payload:state});
+}
+
+function applyRemoteState(state){
+  if(!state || typeof state !== "object") return;
+  if(typeof state.concertName==="string" && state.concertName.trim()) {
+    concertName=state.concertName.trim();
+    localStorage.setItem(STORAGE_KEYS.concertName,concertName);
+  }
+  if(state.concertId && concerts.some(c => c.id === state.concertId)) {
+    currentConcertId = state.concertId;
+    localStorage.setItem("ctp_current_concert_id", currentConcertId);
+  }
+  let target = -1;
+  if(state.songId) target = playlist.findIndex(s => s.id === state.songId);
+  if(target < 0 && Number.isInteger(state.songIndex) && playlist[state.songIndex]) target = state.songIndex;
+  if(target >= 0) currentSongIndex = target;
+  const song = playlist[currentSongIndex];
+  if(song && Number.isInteger(state.lineIndex)) currentLineIndex = clampInt(state.lineIndex,0,song.lyrics.length-1,0);
+  if(song && Number.isFinite(Number(state.transposeOffset))) song.transposeOffset = Number(state.transposeOffset);
+  updateViews({broadcast:false});
+}
+
+function executeRemoteCommand(command){
+  if(!command) return;
+  switch(command.action){
+    case "NEXT": nextLine(false); break;
+    case "PREV": prevLine(false); break;
+    case "REPEAT": repeatLine(false); break;
+    case "CHORUS": goToChorus(false); break;
+    case "LINE": jumpToLine(Number(command.index),false); break;
+    case "SONG": if(command.songId) selectSongById(command.songId,false); else if(Number.isInteger(command.index)) selectSong(command.index,false); break;
+    case "ROLE": if(command.role) switchRole(command.role,false); break;
+    case "ALERT": showToast("📣 "+(command.message||"Aviso del operador"),"warning"); break;
+  }
+}
+
+function connectWebSocket(){
+  const url = document.getElementById("ws-url-input").value.trim();
+  if(!url) { showToast("Introduce una dirección WebSocket","warning"); return; }
+  if(!/^wss?:\/\//i.test(url)) { showToast("La URL debe comenzar con ws:// o wss://","warning"); return; }
+  localStorage.setItem(STORAGE_KEYS.wsUrl,url);
+  closeWebSocket();
+  try {
+    ws = new WebSocket(url);
+    updateNetworkUI("Conectando...");
+    ws.onopen = () => {
+      networkMode = "websocket";
+      updateNetworkUI();
+      showToast("📡 Conectado a Stage Network");
+      broadcastMessage({type:"DEVICE_JOIN",payload:{deviceId,name:deviceName,role:currentRole}});
+      broadcastCurrentState(true);
+    };
+    ws.onmessage = event => {
+      try { handleNetworkMessage(JSON.parse(event.data)); } catch(_e) {}
+    };
+    ws.onerror = () => {
+      updateNetworkUI("Error de red");
+      showToast("Error en WebSocket","error");
+    };
+    ws.onclose = () => {
+      if(networkMode === "websocket") {
+        networkMode = "local";
+        updateNetworkUI("Desconectado");
+      }
+      scheduleReconnect();
+    };
+  } catch(error) {
+    updateNetworkUI("Error");
+    showToast("No se pudo iniciar WebSocket","error");
+  }
+}
+
+function scheduleReconnect(){
+  clearTimeout(wsReconnectTimer);
+  const url = localStorage.getItem(STORAGE_KEYS.wsUrl);
+  if(!url) return;
+  wsReconnectTimer = setTimeout(() => {
+    if(!ws || ws.readyState === WebSocket.CLOSED) {
+      document.getElementById("ws-url-input").value = url;
+      connectWebSocket();
+    }
+  }, 5000);
+}
+
+function closeWebSocket(){
+  clearTimeout(wsReconnectTimer);
+  if(ws) {
+    try { ws.onclose = null; ws.close(); } catch(_e) {}
+    ws = null;
+  }
+}
+
+function activateLocalMode(){
+  closeWebSocket();
+  networkMode = "local";
+  updateNetworkUI();
+  showToast("🏠 Modo local activado");
+}
+
+function updateNetworkUI(message=null){
+  const online = networkMode === "websocket";
+  const dot = document.getElementById("network-dot");
+  const light = document.getElementById("connection-light");
+  dot?.classList.toggle("online",online);
+  light?.classList.toggle("online",online || !!localChannel);
+  setText("network-label", message || (online ? "WebSocket conectado" : localChannel ? "Red local" : "Modo local"));
+  setText("connection-text", message || (online ? "WebSocket" : localChannel ? "Broadcast local" : "Modo local"));
+  setText("network-room-label", concertName);
+}
+
+function registerDevice(device){
+  if(!device?.deviceId) return;
+  const existing = connectedDevices.find(d => d.deviceId === device.deviceId);
+  if(existing) Object.assign(existing,device,{online:true,lastSeen:Date.now()});
+  else connectedDevices.push({...device,online:true,lastSeen:Date.now()});
+  renderDevices();
+}
+
+function removeDevice(id){
+  const device = connectedDevices.find(d => d.deviceId === id);
+  if(device) device.online = false;
+  renderDevices();
+}
+
+/* ==========================================================
+   ROLE / DISPLAY
+========================================================== */
+function switchRole(role, shouldBroadcast=true){
+  const allowed = ["singer","musician","hybrid","operator"];
+  if(!allowed.includes(role)) return;
+  currentRole = role;
+  sessionStorage.setItem("ctp_role",role);
+  document.querySelectorAll(".role-btn").forEach(btn => btn.classList.toggle("active",btn.dataset.role===role));
+  document.querySelectorAll(".view-panel").forEach(panel => panel.classList.remove("active"));
+  document.getElementById("view-"+role)?.classList.add("active");
+  registerDevice({deviceId,name:deviceName,role,online:true,lastSeen:Date.now()});
+  if(shouldBroadcast) broadcastMessage({type:"DEVICE_JOIN",payload:{deviceId,name:deviceName,role}});
+  updateViews({broadcast:false});
+}
+
+function openDisplaySettings(){
+  document.getElementById("font-size-range").value = displaySettings.fontScale;
+  setText("font-size-label",displaySettings.fontScale+"%");
+  document.getElementById("highlight-style").value = displaySettings.highlight;
+  openModal("display-modal");
+}
+
+function loadDisplaySettings(){
+  try {
+    const raw=localStorage.getItem(STORAGE_KEYS.display);
+    if(raw) displaySettings={...displaySettings,...JSON.parse(raw)};
+  } catch(_e) {}
+  setFontScale(displaySettings.fontScale,false);
+  saveDisplaySettings(false);
+}
+
+function setFontScale(value, persist=true){
+  const scale = clampInt(value,80,150,100);
+  displaySettings.fontScale=scale;
+  document.documentElement.style.setProperty("--focus-size",(scale/100).toFixed(2));
+  setText("font-size-label",scale+"%");
+  if(persist) saveDisplaySettings(false);
+}
+
+function saveDisplaySettings(show=true){
+  const style = document.getElementById("highlight-style")?.value || displaySettings.highlight || "classic";
+  displaySettings.highlight=style;
+  localStorage.setItem(STORAGE_KEYS.display,JSON.stringify(displaySettings));
+  document.body.dataset.highlightStyle=style;
+  if(show) showToast("Configuración de pantalla guardada");
+}
+
+function resetDisplaySettings(){
+  displaySettings={fontScale:100,highlight:"classic"};
+  setFontScale(100,false);
+  document.getElementById("highlight-style").value="classic";
+  saveDisplaySettings(false);
+  showToast("Pantalla restablecida");
+}
+
+async function toggleFullscreen(){
+  try {
+    if(!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+    else await document.exitFullscreen?.();
+  } catch(error) { showToast("El navegador bloqueó pantalla completa","warning"); }
+}
+
+async function toggleWakeLock(){
+  if(!("wakeLock" in navigator)) {
+    showToast("Wake Lock no está disponible en este navegador","warning");
+    return;
+  }
+  try {
+    if(wakeLock) {
+      await wakeLock.release();
+      wakeLock=null;
+      showToast("📱 Mantener pantalla desactivado");
+    } else {
+      wakeLock=await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener?.("release",()=>{wakeLock=null;});
+      showToast("📱 Pantalla mantenida activa");
+    }
+  } catch(error) { showToast("No se pudo mantener la pantalla activa","warning"); }
+}
+
+/* ==========================================================
+   CHORDS / KEY
+========================================================== */
+const chromaticScale=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const flatMap={Db:"C#",Eb:"D#",Gb:"F#",Ab:"G#",Bb:"A#"};
+const KEY_OPTIONS=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B","Db","Eb","Gb","Ab","Bb","Am","Dm","Em","Fm","Gm"];
+function transposeChordString(chordStr,semitones){
+  if(!chordStr || chordStr==="N/A") return chordStr || "N/A";
+  return chordStr.replace(/\b([A-G](?:#|b)?)(?=[^A-Za-z]|$)/g,(_,root)=>{
+    const normalized=flatMap[root]||root;
+    const index=chromaticScale.indexOf(normalized);
+    if(index<0) return root;
+    let ni=(index+semitones)%12;
+    if(ni<0) ni+=12;
+    return chromaticScale[ni];
+  });
+}
+function keyToPitch(key){
+  const normalized=flatMap[key]||key;
+  const m=normalized.match(/^[A-G]#/);
+  const base=normalized.replace(/m$/,"");
+  const n=flatMap[base]||base;
+  return chromaticScale.indexOf(n);
+}
+function transposeKey(key,semitones){
+  const minor = /m$/.test(key);
+  const pitch=keyToPitch(key);
+  if(pitch<0) return key;
+  let ni=(pitch+semitones)%12;if(ni<0)ni+=12;
+  return chromaticScale[ni]+(minor?"m":"");
+}
+function setKey(key){
+  const song=playlist[currentSongIndex];
+  if(!song) return;
+  const original=keyToPitch(song.key);
+  const desired=keyToPitch(key);
+  if(original>=0 && desired>=0) {
+    let delta=(desired-original)%12;
+    if(delta>6) delta-=12;
+    if(delta<-6) delta+=12;
+    song.transposeOffset=(Number(song.transposeOffset)||0)+delta;
+  }
+  song.key=key;
+  saveLibrary();
+  updateViews();
+  broadcastCurrentState(true);
+}
+function transposeSemitone(delta){
+  const song=playlist[currentSongIndex]; if(!song) return;
+  song.transposeOffset=(Number(song.transposeOffset)||0)+delta;
+  song.key=transposeKey(song.key||song.baseKey||"C",delta);
+  saveLibrary(); updateViews(); broadcastCurrentState(true);
+  showToast((delta>0?"♯":"♭")+" Tono: "+song.key);
+}
+function populateKeySelect(){
+  const selects=[document.getElementById("key-select"),document.getElementById("edit-key")].filter(Boolean);
+  selects.forEach(select=>select.innerHTML="");
+  KEY_OPTIONS.forEach(key=>{
+    selects.forEach(select=>{
+      const opt=document.createElement("option");opt.value=key;opt.textContent=key;select.appendChild(opt.cloneNode(true));
+    });
+  });
+}
+
+function openStageWindow(role){
+  if(!["singer","musician","hybrid"].includes(role))return;
+  const url=new URL(location.href);
+  url.searchParams.set("role",role);
+  const opened=window.open(url.href,"concert-stage-"+role);
+  if(opened) {
+    opened.focus();
+    showToast("Pantalla de "+role+" abierta","info");
+  } else {
+    showToast("Permite ventanas emergentes para abrir la pantalla","warning");
+  }
+}
+
+/* ==========================================================
+   VIEWS / NAVIGATION
+========================================================== */
+function updateViews(options={}){
+  const {broadcast=true}=options;
+  ensureCurrentSongVisible();
+  const song=playlist[currentSongIndex];
+  if(!song) return;
+  currentLineIndex=clampInt(currentLineIndex,0,song.lyrics.length-1,0);
+  bpm=clampInt(song.bpm,30,250,100);
+  const offset=Number(song.transposeOffset)||0;
+  const previous=currentLineIndex>0?song.lyrics[currentLineIndex-1]:"---";
+  const current=song.lyrics[currentLineIndex]||"FIN DE CANCIÓN";
+  const next=currentLineIndex<song.lyrics.length-1?song.lyrics[currentLineIndex+1]:"---";
+  const cue=song.cues[currentLineIndex]||"GENERAL";
+  const chord=transposeChordString(song.chords[currentLineIndex]||"N/A",offset);
+
+  setText("s-line-0",previous);setText("s-line-1",current);setText("s-line-2",next);
+  setText("singer-show",concertName);setText("singer-song",song.title);
+  setText("musician-section","SECCIÓN: "+cue);setText("musician-chords",chord);
+  setText("musician-lyrics-preview",'“'+current+'”');setText("musician-cue","⚡ "+cue);
+  setText("hybrid-section","SECCIÓN: "+cue);setText("hybrid-chords",chord);setText("hybrid-cue","⚡ "+cue);
+  setText("h-line-0",previous);setText("h-line-1",current);setText("h-line-2",next);
+  setText("operator-song-title",song.title);setText("operator-current-line",current);setText("operator-current-cue",cue);
+  setText("line-counter","Línea "+(currentLineIndex+1)+" / "+song.lyrics.length);
+  setText("footer-song",song.title);setText("operator-show-title",concertName);
+  setText("stat-bpm",song.bpm);setText("stat-key",song.key||"C");
+  setText("stat-progress",Math.round(((currentLineIndex+1)/song.lyrics.length)*100)+"%");
+  setValue("bpm-input",song.bpm||100);
+  document.getElementById("key-select").value=song.key||"C";
+  const slider=document.getElementById("line-slider");
+  if(slider){slider.max=Math.max(0,song.lyrics.length-1);slider.value=currentLineIndex;}
+  const badge=document.getElementById("live-badge"); badge?.classList.toggle("ready",currentLineIndex===0);
+  if(broadcast) broadcastCurrentState();
+  renderSetlistUI();
+}
+
+function nextLine(shouldBroadcast=true){
+  const song=playlist[currentSongIndex]; if(!song) return;
+  if(currentLineIndex<song.lyrics.length-1){
+    currentLineIndex++; updateViews({broadcast:shouldBroadcast});
+    if(shouldBroadcast) broadcastMessage({type:"COMMAND",payload:{action:"NEXT"}});
+  } else {
+    const advanced=nextSong(false);
+    if(!advanced) showToast("Fin de la canción","warning");
+    else if(shouldBroadcast) broadcastMessage({type:"COMMAND",payload:{action:"SONG",songId:playlist[currentSongIndex].id}});
+  }
+}
+function prevLine(shouldBroadcast=true){
+  if(currentLineIndex>0){currentLineIndex--;updateViews({broadcast:shouldBroadcast});if(shouldBroadcast)broadcastMessage({type:"COMMAND",payload:{action:"PREV"}});}
+}
+function repeatLine(shouldBroadcast=true){
+  updateViews({broadcast:false}); showToast("↻ Línea repetida","info");
+  if(shouldBroadcast) broadcastMessage({type:"COMMAND",payload:{action:"REPEAT"}});
+}
+function toggleAutoAdvance(){
+  if(autoAdvanceTimer){
+    clearInterval(autoAdvanceTimer);autoAdvanceTimer=null;
+    setText("auto-advance-btn","▶ Auto avance");showToast("Auto avance detenido","info");return;
+  }
+  const song=playlist[currentSongIndex];if(!song)return;
+  const interval=Math.max(1000,Math.round((60000/song.bpm)*4));
+  autoAdvanceTimer=setInterval(()=>nextLine(),interval);
+  setText("auto-advance-btn","⏸ Detener auto");showToast("Auto avance: cada "+Math.round(interval/1000)+" s","info");
+}
+function sendStagePing(){
+  broadcastMessage({type:"COMMAND",payload:{action:"ALERT",message:"Atención: cambio próximo"}});
+  showToast("📣 Aviso enviado a las pantallas","info");
+}
+function jumpToLine(index,shouldBroadcast=true){
+  const song=playlist[currentSongIndex]; if(!song || !Number.isInteger(index)) return;
+  currentLineIndex=clampInt(index,0,song.lyrics.length-1,0); updateViews({broadcast:shouldBroadcast});
+  if(shouldBroadcast) broadcastMessage({type:"COMMAND",payload:{action:"LINE",index:currentLineIndex}});
+}
+function selectSong(index,shouldBroadcast=true){
+  if(!playlist[index]) return false;
+  currentSongIndex=index;currentLineIndex=0;bpm=playlist[index].bpm||100;
+  updateViews({broadcast:shouldBroadcast});
+  showToast("🎵 "+playlist[index].title);
+  if(shouldBroadcast) broadcastMessage({type:"COMMAND",payload:{action:"SONG",songId:playlist[index].id}});
+  return true;
+}
+function selectSongById(id,shouldBroadcast=true){
+  const idx=playlist.findIndex(song=>song.id===id); return idx>=0?selectSong(idx,shouldBroadcast):false;
+}
+function nextSong(shouldBroadcast=true){
+  const visible=getVisibleSongIndices(); if(!visible.length) return false;
+  const pos=visible.indexOf(currentSongIndex); const next=visible[(pos+1)%visible.length];
+  if(!Number.isInteger(next)) return false;
+  return selectSong(next,shouldBroadcast);
+}
+function previousSong(shouldBroadcast=true){
+  const visible=getVisibleSongIndices(); if(!visible.length) return false;
+  const pos=visible.indexOf(currentSongIndex); const prev=visible[(pos-1+visible.length)%visible.length];
+  if(!Number.isInteger(prev)) return false;
+  return selectSong(prev,shouldBroadcast);
+}
+function goToChorus(shouldBroadcast=true){
+  const song=playlist[currentSongIndex]; if(!song) return;
+  let index=song.cues.findIndex(c=>String(c).toUpperCase().includes("CORO"));
+  if(index<0) index=song.lyrics.findIndex(line=>String(line).toUpperCase().includes("CORO"));
+  if(index<0){showToast("No hay marcador CORO","warning");return;}
+  jumpToLine(index,shouldBroadcast); showToast("🚨 Saltando al CORO");
+}
+function jumpToMarker(marker,shouldBroadcast=true){
+  const song=playlist[currentSongIndex]; if(!song) return;
+  const token=String(marker).toUpperCase();
+  const index=song.cues.findIndex(c=>String(c).toUpperCase().includes(token));
+  if(index<0){showToast("Marcador "+marker+" no encontrado","warning");return;}
+  jumpToLine(index,shouldBroadcast); showToast("→ "+marker);
+}
+function setBPM(value){
+  const song=playlist[currentSongIndex]; if(!song) return;
+  song.bpm=clampInt(value,30,250,100); bpm=song.bpm; saveLibrary(); updateViews(); broadcastCurrentState(true);
+}
+
+/* ==========================================================
+   LIBRARY / EDITOR
+========================================================== */
+function filterCategory(category,button){
+  currentCategory=category;
+  document.querySelectorAll(".category-btn").forEach(btn=>btn.classList.remove("active"));
+  button?.classList.add("active"); renderSetlistUI();
+}
+function renderSetlistUI(){
+  const container=document.getElementById("setlist-container-ui"); if(!container) return;
+  const search=(document.getElementById("song-search")?.value||"").trim().toLowerCase();
+  const visibleIds=new Set(getVisibleSongIndices().map(i=>playlist[i]?.id).filter(Boolean));
+  const filtered=playlist.map((song,index)=>({song,index})).filter(item=>{
+    const categoryOk=currentCategory==="Todos" || item.song.category===currentCategory;
+    const textOk=!search || item.song.title.toLowerCase().includes(search) || item.song.category.toLowerCase().includes(search);
+    const concertOk=visibleIds.has(item.song.id);
+    return categoryOk && textOk && concertOk;
+  });
+  container.innerHTML="";
+  if(!filtered.length){container.innerHTML='<div class="empty-state">No hay canciones con estos filtros.</div>';setText("song-count","0 canciones");return;}
+  filtered.forEach(({song,index},position)=>{
+    const row=document.createElement("div");row.className="setlist-item"+(index===currentSongIndex?" selected":"");row.dataset.index=index;
+    row.addEventListener("click",()=>selectSong(index));
+    const actions=document.createElement("div");actions.className="song-actions";
+    const edit=document.createElement("button");edit.className="icon-btn";edit.title="Editar";edit.textContent="✎";edit.addEventListener("click",e=>{e.stopPropagation();loadSongIntoEditor(index);});
+    actions.appendChild(edit);
+    const info=document.createElement("div");info.className="song-info";
+    info.innerHTML='<div class="song-number">'+String(position+1).padStart(2,"0")+"</div><div class=\"song-name\"></div><div class=\"song-meta\"></div>";
+    info.querySelector(".song-name").textContent=song.title;
+    info.querySelector(".song-meta").textContent=song.category+" · "+song.bpm+" BPM · "+(song.key||"C");
+    row.appendChild(info);row.appendChild(actions);container.appendChild(row);
+  });
+  setText("song-count",filtered.length+(filtered.length===1?" canción":" canciones"));
+}
+function loadSongIntoEditor(index){
+  const song=playlist[index];if(!song)return;
+  editingIndex=index;
+  setValue("edit-title",song.title);
+  const categorySelect=document.getElementById("edit-category");
+  if(categorySelect && !Array.from(categorySelect.options).some(option=>option.value===song.category)){
+    const option=document.createElement("option");option.value=song.category;option.textContent=song.category;categorySelect.appendChild(option);
+  }
+  setValue("edit-category",song.category);
+  setValue("edit-bpm",song.bpm||100);
+  setValue("edit-key",song.key||"C");
+  setValue("edit-lyrics",song.lyrics.join("\n"));
+  setValue("edit-chords",song.chords.join("\n"));
+  setValue("edit-cues",song.cues.join("\n"));
+  setText("edit-mode-label","Editando");showToast("Editando: "+song.title,"info");
+}
+function resetEditor(){
+  editingIndex=-1;
+  setValue("edit-title","");setValue("edit-category","Banda");setValue("edit-bpm",100);setValue("edit-key","C");
+  setValue("edit-lyrics","");setValue("edit-chords","");setValue("edit-cues","");
+  setText("edit-mode-label","Nueva");
+}
+function saveSongChanges(){
+  const title=document.getElementById("edit-title").value.trim();
+  const category=document.getElementById("edit-category").value;
+  const lyrics=document.getElementById("edit-lyrics").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const chords=document.getElementById("edit-chords").value.split(/\r?\n/).map(x=>x.trim());
+  const cues=document.getElementById("edit-cues").value.split(/\r?\n/).map(x=>x.trim());
+  const songBpm=clampInt(document.getElementById("edit-bpm").value,30,250,100);
+  const songKey=document.getElementById("edit-key").value||"C";
+  if(!title || !lyrics.length){showToast("Título y letra son obligatorios","warning");return;}
+  const old=editingIndex>=0?playlist[editingIndex]:null;
+  const song=normalizeSong({
+    id:old?.id,title,category,lyrics,
+    chords:lyrics.map((_,i)=>chords[i]||chords[0]||"N/A"),
+    cues:lyrics.map((_,i)=>cues[i]||cues[0]||"VERSO"),
+    baseKey:old?.baseKey||old?.key||"C",
+    transposeOffset:old?.transposeOffset||0,
+    bpm:songBpm,
+    key:songKey
+  },editingIndex>=0?editingIndex:playlist.length);
+  if(editingIndex===-1){
+    playlist.push(song);
+    const concert=getCurrentConcert(); if(concert) concert.songIds.push(song.id);
+    currentSongIndex=playlist.length-1;
+  } else {
+    playlist[editingIndex]=song;
+    const concert=getCurrentConcert(); if(concert && !concert.songIds.includes(song.id)) concert.songIds.push(song.id);
+    currentSongIndex=editingIndex;
+  }
+  currentLineIndex=0;saveLibrary();saveConcerts();updateViews();resetEditor();broadcastCurrentState(true);showToast("💾 Canción guardada");
+}
+function duplicateCurrentSong(){
+  const source=playlist[currentSongIndex];
+  if(!source)return;
+  const copy=normalizeSong({...source,id:null,title:source.title+" — Copia"},playlist.length);
+  playlist.push(copy);
+  const concert=getCurrentConcert();
+  if(concert && !concert.songIds.includes(copy.id)) concert.songIds.push(copy.id);
+  currentSongIndex=playlist.length-1;currentLineIndex=0;
+  saveLibrary();saveConcerts();loadSongIntoEditor(currentSongIndex);updateViews();showToast("⧉ Canción duplicada","info");
+}
+function exportLibrary(){
+  const payload=JSON.stringify({version:APP_VERSION,exportedAt:new Date().toISOString(),songs:playlist,concerts},null,2);
+  const link=document.createElement("a");
+  link.href=URL.createObjectURL(new Blob([payload],{type:"application/json"}));
+  link.download="teleprompter-biblioteca-"+new Date().toISOString().slice(0,10)+".json";
+  link.click();URL.revokeObjectURL(link.href);showToast("⬇ Biblioteca exportada","info");
+}
+function importLibrary(event){
+  const file=event.target.files?.[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try {
+      const parsed=JSON.parse(String(reader.result||""));
+      const songs=Array.isArray(parsed)?parsed:parsed.songs;
+      if(!Array.isArray(songs)||!songs.length) throw new Error("Formato inválido");
+      const existing=new Set(playlist.map(song=>song.title.toLowerCase()));
+      let added=0;
+      songs.forEach((song,index)=>{
+        const normalized=normalizeSong(song,playlist.length+index);
+        if(existing.has(normalized.title.toLowerCase()))return;
+        existing.add(normalized.title.toLowerCase());playlist.push(normalized);added++;
+      });
+      if(!added)throw new Error("No hay canciones nuevas");
+      const concert=getCurrentConcert();if(concert)concert.songIds.push(...playlist.slice(-added).map(song=>song.id));
+      saveLibrary();saveConcerts();renderSetlistUI();updateViews();showToast("⬆ "+added+" canción"+(added===1?" importada":"es importadas"));
+    } catch(error) { showToast("No se pudo importar: "+error.message,"warning"); }
+    event.target.value="";
+  };
+  reader.onerror=()=>{event.target.value="";showToast("No se pudo leer el archivo","warning");};
+  reader.readAsText(file);
+}
+function deleteCurrentSong(){
+  if(editingIndex<0){showToast("Selecciona una canción para eliminar","warning");return;}
+  const song=playlist[editingIndex];if(!song)return;
+  if(playlist.length<=1){showToast("Debe quedar al menos una canción","warning");return;}
+  if(!confirm("¿Eliminar \""+song.title+"\"?")) return;
+  playlist.splice(editingIndex,1);
+  concerts.forEach(c=>c.songIds=c.songIds.filter(id=>id!==song.id));
+  saveLibrary();saveConcerts();
+  currentSongIndex=Math.max(0,Math.min(currentSongIndex,playlist.length-1));currentLineIndex=0;
+  resetEditor();updateViews();showToast("🗑 Canción eliminada","warning");
+}
+
+/* ==========================================================
+   CONCERTS
+========================================================== */
+function openConcertManager(){renderConcerts();openModal("concert-modal");}
+function renderConcerts(){
+  const container=document.getElementById("concert-list");container.innerHTML="";
+  concerts.forEach(concert=>{
+    const row=document.createElement("div");row.className="setlist-item"+(concert.id===currentConcertId?" selected":"");
+    const info=document.createElement("div");info.className="song-info";info.innerHTML='<div class="song-name"></div><div class="song-meta"></div>';
+    info.querySelector(".song-name").textContent=concert.name;
+    info.querySelector(".song-meta").textContent=(concert.songIds?.length||0)+" canciones";
+    const actions=document.createElement("div");actions.className="song-actions";
+    const open=document.createElement("button");open.className="small-btn";open.textContent=concert.id===currentConcertId?"Activo":"Abrir";
+    open.addEventListener("click",()=>activateConcert(concert.id));
+    actions.appendChild(open);
+    if(concert.id!=="default"){
+      const del=document.createElement("button");del.className="small-btn";del.textContent="Eliminar";del.addEventListener("click",()=>deleteConcert(concert.id));actions.appendChild(del);
+    }
+    row.appendChild(info);row.appendChild(actions);container.appendChild(row);
+  });
+}
+function activateConcert(id){
+  const concert=concerts.find(c=>c.id===id);if(!concert)return;
+  currentConcertId=id;concertName=concert.name;localStorage.setItem("ctp_current_concert_id",id);localStorage.setItem(STORAGE_KEYS.concertName,concertName);
+  ensureCurrentSongVisible();currentLineIndex=0;closeModal("concert-modal");updateViews();updateNetworkUI();broadcastCurrentState(true);showToast("📋 "+concert.name);
+}
+function createConcert(){
+  const input=document.getElementById("new-concert-name");const name=input.value.trim();
+  if(!name){showToast("Escribe un nombre","warning");return;}
+  const concert={id:"concert-"+cryptoRandomId(),name,songIds:playlist.map(s=>s.id)};
+  concerts.push(concert);saveConcerts();input.value="";renderConcerts();showToast("Concierto creado");
+}
+function deleteConcert(id){
+  if(id==="default")return;
+  const concert=concerts.find(c=>c.id===id);if(!concert)return;
+  if(!confirm("¿Eliminar el concierto \""+concert.name+"\"?"))return;
+  concerts=concerts.filter(c=>c.id!==id);
+  if(currentConcertId===id) currentConcertId="default";
+  saveConcerts();renderConcerts();activateConcert(currentConcertId);
+}
+
+/* ==========================================================
+   COUNTDOWN / LOCK
+========================================================== */
+function startSongCountdown(){
+  const song=playlist[currentSongIndex];if(!song)return;
+  clearInterval(countdownTimer);
+  const overlay=document.getElementById("countdown-overlay"),number=document.getElementById("countdown-number");
+  overlay.classList.add("show");setText("countdown-song",song.title);
+  let count=3;setText("countdown-number",count);
+  countdownTimer=setInterval(()=>{
+    count--;
+    if(count<=0){
+      clearInterval(countdownTimer);countdownTimer=null;setText("countdown-number","▶");
+      setTimeout(()=>{overlay.classList.remove("show");currentLineIndex=0;updateViews();broadcastCurrentState(true);},600);
+    } else setText("countdown-number",count);
+  },1000);
+}
+function toggleLock(){
+  document.getElementById("lock-overlay").classList.toggle("show");
+}
+document.getElementById("lock-overlay").addEventListener("click",()=>{
+  const now=Date.now();if(now-lockTapTimer<500)toggleLock();lockTapTimer=now;
+});
+
+/* ==========================================================
+   VOICE
+========================================================== */
+function initVoiceRecognition(){
+  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SpeechRecognition){showToast("Reconocimiento de voz no disponible en este navegador","warning");return false;}
+  recognition=new SpeechRecognition();
+  recognition.lang="es-ES";recognition.continuous=true;recognition.interimResults=false;recognition.maxAlternatives=1;
+  recognition.onstart=()=>{recognitionStarting=false;isListening=true;updateMicButtons();};
+  recognition.onerror=event=>{recognitionStarting=false;console.warn("SpeechRecognition",event.error);if(event.error!=="no-speech"&&event.error!=="aborted")showToast("Voz: "+event.error,"warning");};
+  recognition.onend=()=>{recognitionStarting=false;if(isListening) setTimeout(()=>safeStartRecognition(),350);};
+  recognition.onresult=event=>{
+    const last=event.results[event.results.length-1]; if(!last?.[0])return;
+    const text=last[0].transcript.toLowerCase().replace(/\s+/g," ").trim();
+    if(!text)return;
+    const now=Date.now();
+    if(text===lastVoiceCommand && now-lastVoiceCommandAt<900)return;
+    lastVoiceCommand=text;lastVoiceCommandAt=now;
+    if(/\b(siguiente|avanza|adelante|abajo)\b/.test(text)) nextLine();
+    else if(/\b(atr[aá]s|regresa|retrocede|anterior)\b/.test(text)) prevLine();
+    else if(/\bcoro\b/.test(text)) goToChorus();
+    else if(/\bintro\b/.test(text)) jumpToMarker("INTRO");
+    else if(/\bsolo\b/.test(text)) jumpToMarker("SOLO");
+    else if(/\bfinal\b/.test(text)) jumpToMarker("FINAL");
+    else if(/\bbloquea|bloquear\b/.test(text)) toggleLock();
+  };
+  return true;
+}
+function safeStartRecognition(){
+  if(!recognition||!isListening||recognitionStarting)return;
+  recognitionStarting=true;try{recognition.start();}catch(error){recognitionStarting=false;}
+}
+function toggleVoiceControl(){
+  if(!recognition && !initVoiceRecognition())return;
+  if(isListening){
+    isListening=false;try{recognition.stop();}catch(_e){};updateMicButtons();showToast("🎤 Voz desactivada","info");
+  } else {
+    isListening=true;safeStartRecognition();updateMicButtons();showToast("🎤 Escuchando comandos: siguiente, anterior, coro, intro, solo, final");
+  }
+}
+function updateMicButtons(){
+  const state=isListening?"🎤 Escuchando...":"🎤 Activar reconocimiento";
+  ["mic-singer-btn","mic-hybrid-btn"].forEach(id=>{
+    const btn=document.getElementById(id);if(!btn)return;
+    btn.textContent=state;btn.classList.toggle("danger",isListening);
+  });
+}
+
+/* ==========================================================
+   KEYBOARD / PEDAL
+========================================================== */
+window.addEventListener("keydown",event=>{
+  if(document.getElementById("lock-overlay").classList.contains("show"))return;
+  const tag=document.activeElement?.tagName;
+  if(["INPUT","TEXTAREA","SELECT"].includes(tag))return;
+  if(event.repeat && ["Space","ArrowRight","ArrowLeft","ArrowDown","ArrowUp"].includes(event.code))return;
+  switch(event.code){
+    case "Space":case "ArrowRight":case "ArrowDown":event.preventDefault();nextLine();break;
+    case "ArrowLeft":case "ArrowUp":event.preventDefault();prevLine();break;
+    case "KeyC":goToChorus();break;
+    case "KeyI":jumpToMarker("INTRO");break;
+    case "KeyS":jumpToMarker("SOLO");break;
+    case "KeyF":jumpToMarker("FINAL");break;
+    case "KeyL":toggleLock();break;
+    case "KeyV":toggleVoiceControl();break;
+    case "F11":event.preventDefault();toggleFullscreen();break;
+    case "Escape":document.querySelectorAll(".modal-overlay.show").forEach(m=>m.classList.remove("show"));break;
+  }
+});
+
+/* ==========================================================
+   NETWORK MODAL / QR
+========================================================== */
+function openNetworkModal(){
+  setValue("ws-url-input",localStorage.getItem(STORAGE_KEYS.wsUrl)||"");
+  setValue("device-name-input",deviceName);setValue("concert-name-input",concertName);openModal("network-modal");
+}
+function generateConnectionQR(){
+  const url=document.getElementById("ws-url-input").value.trim();
+  const payload=JSON.stringify({app:"ConcertTeleprompterPro",version:APP_VERSION,ws:url,concert:concertName,device:deviceName});
+  setText("qr-code-text",payload);
+  createQR(payload);
+  showToast("Código de conexión preparado","info");
+}
+async function createQR(text){
+  const canvas=document.getElementById("qrCanvas");const ctx=canvas.getContext("2d");
+  if(!ctx)return;
+  /* Try a real QR library when internet is available; otherwise show a clear fallback. */
+  if(!window.QRCode && !window.__qrLoading){
+    window.__qrLoading=true;
+    try {
+      await loadScript("https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js");
+    } catch(_e) {}
+  }
+  if(window.QRCode?.toCanvas){
+    try { await window.QRCode.toCanvas(canvas,text,{width:180,margin:1,errorCorrectionLevel:"M"}); return; } catch(_e) {}
+  }
+  drawFallbackQR(text,ctx);
+}
+function loadScript(src){
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement("script");s.src=src;s.async=true;s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
+  });
+}
+function drawFallbackQR(text,ctx){
+  const size=180,grid=29,cell=size/grid;ctx.fillStyle="#fff";ctx.fillRect(0,0,size,size);
+  let hash=0;for(const ch of text)hash=((hash*31)+ch.charCodeAt(0))>>>0;
+  const rnd=()=>{hash=(hash*1664525+1013904223)>>>0;return hash/4294967296;};
+  ctx.fillStyle="#000";
+  for(let y=0;y<grid;y++)for(let x=0;x<grid;x++)if(rnd()>.52)ctx.fillRect(x*cell,y*cell,Math.ceil(cell),Math.ceil(cell));
+  [[0,0],[grid-7,0],[0,grid-7]].forEach(([x,y])=>drawFinder(ctx,cell,x,y));
+}
+function drawFinder(ctx,cell,x,y){
+  ctx.fillStyle="#000";ctx.fillRect(x*cell,y*cell,7*cell,7*cell);
+  ctx.fillStyle="#fff";ctx.fillRect((x+1)*cell,(y+1)*cell,5*cell,5*cell);
+  ctx.fillStyle="#000";ctx.fillRect((x+2)*cell,(y+2)*cell,3*cell,3*cell);
+}
+document.getElementById("device-name-input").addEventListener("change",event=>{
+  deviceName=event.target.value.trim()||"Dispositivo";localStorage.setItem(STORAGE_KEYS.deviceName,deviceName);
+  registerDevice({deviceId,name:deviceName,role:currentRole,online:true,lastSeen:Date.now()});
+});
+document.getElementById("concert-name-input").addEventListener("change",event=>{
+  concertName=event.target.value.trim()||"Concierto en Vivo";localStorage.setItem(STORAGE_KEYS.concertName,concertName);updateViews({broadcast:false});updateNetworkUI();
+});
+function openModal(id){const el=document.getElementById(id);el?.classList.add("show");el?.setAttribute("aria-hidden","false");}
+function closeModal(id){const el=document.getElementById(id);el?.classList.remove("show");el?.setAttribute("aria-hidden","true");}
+document.querySelectorAll(".modal-overlay").forEach(overlay=>{
+  overlay.addEventListener("click",event=>{if(event.target===overlay)overlay.classList.remove("show");});
+});
+
+/* ==========================================================
+   HELPERS / DEVICES
+========================================================== */
+function clampInt(value,min,max,fallback){
+  const num=Number(value);if(!Number.isFinite(num))return fallback;return Math.round(Math.min(max,Math.max(min,num)));
+}
+function setText(id,text){const el=document.getElementById(id);if(el)el.textContent=String(text??"");}
+function setValue(id,value){const el=document.getElementById(id);if(el)el.value=value??"";}
+function showToast(message,type=""){const container=document.getElementById("toast-container");if(!container)return;const toast=document.createElement("div");toast.className="toast "+type;toast.textContent=message;container.appendChild(toast);setTimeout(()=>toast.remove(),3200);}
+let pendingInstallPrompt=null;
+window.addEventListener("beforeinstallprompt",event=>{
+  event.preventDefault();
+  pendingInstallPrompt=event;
+  document.getElementById("install-app-btn")?.classList.remove("hidden");
+});
+window.addEventListener("appinstalled",()=>{
+  pendingInstallPrompt=null;
+  document.getElementById("install-app-btn")?.classList.add("hidden");
+  showToast("LiveVoz quedó instalado en este dispositivo","info");
+});
+async function installApp(){
+  if(!pendingInstallPrompt){
+    showToast("Usa el menú del navegador y elige “Instalar LiveVoz”","info");
+    return;
+  }
+  pendingInstallPrompt.prompt();
+  const result=await pendingInstallPrompt.userChoice;
+  if(result.outcome==="accepted") showToast("Instalación iniciada","info");
+  pendingInstallPrompt=null;
+  document.getElementById("install-app-btn")?.classList.add("hidden");
+}
+function renderDevices(){
+  const container=document.getElementById("devices-list");if(!container)return;
+  const now=Date.now();
+  connectedDevices=connectedDevices.filter(d=>d.deviceId===deviceId || now-(d.lastSeen||0)<18000);
+  container.innerHTML="";
+  if(!connectedDevices.length){container.innerHTML='<div class="empty-state">Sin dispositivos conectados.</div>';}
+  connectedDevices.forEach(device=>{
+    const card=document.createElement("div");card.className="device-card";
+    const roleMap={singer:"🎤 Cantante",musician:"🎸 Músico",hybrid:"🎸🎤 Híbrido",operator:"🎛 Operador"};
+    const avatarMap={singer:"🎤",musician:"🎸",hybrid:"🎤",operator:"🎛"};
+    card.innerHTML='<div class="device-main"><div class="device-avatar"></div><div><div class="device-name"></div><div class="device-role"></div></div></div><span class="device-status"></span>';
+    card.querySelector(".device-avatar").textContent=avatarMap[device.role]||"📱";
+    card.querySelector(".device-name").textContent=device.name||"Dispositivo";
+    card.querySelector(".device-role").textContent=roleMap[device.role]||"Dispositivo";
+    card.querySelector(".device-status").classList.toggle("online",!!device.online);
+    container.appendChild(card);
+  });
+  setText("device-count",connectedDevices.filter(d=>d.online).length);
+}
+setInterval(()=>{
+  broadcastMessage({type:"PING",payload:{deviceId,name:deviceName,role:currentRole}});
+  connectedDevices.forEach(device=>{if(device.deviceId!==deviceId && Date.now()-(device.lastSeen||0)>15000)device.online=false;});
+  renderDevices();
+},5000);
+
+window.addEventListener("beforeunload",()=>{
+  if(autoAdvanceTimer) clearInterval(autoAdvanceTimer);
+  if(countdownTimer) clearInterval(countdownTimer);
+  try{broadcastMessage({type:"DEVICE_LEAVE",payload:{deviceId}});}catch(_e){}
+  closeWebSocket();
+});
+
+window.addEventListener("error",event=>{
+  console.error("LiveVoz:",event.error||event.message);
+  showToast("Ocurrió un error inesperado. Puedes continuar o recargar.","error");
+});
+
+/* ==========================================================
+   INIT
+========================================================== */
+function init(){
+  populateKeySelect();
+  loadDisplaySettings();
+  setValue("device-name-input",deviceName);
+  setValue("concert-name-input",concertName);
+  ensureCurrentSongVisible();
+  initLocalNetwork();
+  renderConcerts();
+  updateViews({broadcast:false});
+  switchRole(currentRole,false);
+  updateMicButtons();
+  updateNetworkUI();
+  const savedWs=localStorage.getItem(STORAGE_KEYS.wsUrl);
+  if(savedWs) setValue("ws-url-input",savedWs);
+  if(savedWs) setTimeout(()=>{ /* reconnect only when the user previously used WebSocket */ },800);
+  registerDevice({deviceId,name:deviceName,role:currentRole,online:true,lastSeen:Date.now()});
+  setTimeout(()=>broadcastMessage({type:"DEVICE_JOIN",payload:{deviceId,name:deviceName,role:currentRole}}),500);
+  if("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("Service Worker:",error));
+  }
+}
+init();
+</script>
+</body>
+</html>

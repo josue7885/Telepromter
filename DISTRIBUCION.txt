@@ -1,0 +1,38 @@
+LIVEVOZ TELEPROMPTER
+====================
+
+Distribución multiplataforma
+
+1. Para instalarlo en Windows, macOS, Linux, Android o iPhone:
+   - Sirve esta carpeta desde HTTPS o localhost.
+   - Abre teleprompter.html en Chrome, Edge o Safari.
+   - Elige "Instalar LiveVoz" o "Agregar a pantalla de inicio".
+   - Para multipantalla, abre cada rol con:
+     ?role=operator
+     ?role=singer
+     ?role=musician
+     ?role=hybrid
+
+2. Importante:
+   - BroadcastChannel funciona entre pestañas del mismo navegador.
+   - Para teléfonos o tablets en otra red se necesita un servidor WebSocket local.
+   - Abrir el archivo directamente con file:// permite usar la app, pero no siempre permite
+     instalarla como PWA ni registrar el Service Worker.
+
+3. Servidor local rápido:
+   - Con Python: python -m http.server 8080
+   - Después abre: http://localhost:8080/teleprompter.html
+
+Autor y derechos:
+© 2026 JOSUE ALEXIS CHAVEZ GUEVARA. Todos los derechos reservados.
+
+Instalador de escritorio:
+ - Windows: ejecutar "LiveVoz Teleprompter Setup 1.0.0.exe" para instalar o
+   "LiveVoz Teleprompter 1.0.0.exe" como versión portable.
+ - Linux: ejecutar "npm run dist:linux" desde Linux para producir AppImage/DEB.
+   El instalador DEB requiere las herramientas de empaquetado de Linux (fpm).
+ - macOS: ejecutar "npm run dist:mac" desde macOS para producir DMG/ZIP y firmar
+   la aplicación con un certificado Apple antes de distribuirla.
+
+Los instaladores Windows incluidos fueron generados para x64. Para distribuirlos
+de forma profesional se recomienda firmar el EXE con un certificado de código.
