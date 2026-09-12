@@ -1,38 +1,57 @@
-LIVEVOZ TELEPROMPTER
-====================
+LIVEVOZ TELEPROMPTER V11.1
+==========================
 
-Distribución multiplataforma
+Entrada recomendada:
+  teleprompter-v11.html?role=operator
 
-1. Para instalarlo en Windows, macOS, Linux, Android o iPhone:
-   - Sirve esta carpeta desde HTTPS o localhost.
-   - Abre teleprompter.html en Chrome, Edge o Safari.
-   - Elige "Instalar LiveVoz" o "Agregar a pantalla de inicio".
-   - Para multipantalla, abre cada rol con:
-     ?role=operator
-     ?role=singer
-     ?role=musician
-     ?role=hybrid
+Roles disponibles:
+  ?role=operator
+  ?role=singer
+  ?role=musician
+  ?role=hybrid
 
-2. Importante:
-   - BroadcastChannel funciona entre pestañas del mismo navegador.
-   - Para teléfonos o tablets en otra red se necesita un servidor WebSocket local.
-   - Abrir el archivo directamente con file:// permite usar la app, pero no siempre permite
-     instalarla como PWA ni registrar el Service Worker.
+SUPABASE
+--------
+El proyecto usa Supabase para autenticación, PostgreSQL, Realtime, respaldos,
+conciertos compartidos e historial de cambios.
 
-3. Servidor local rápido:
-   - Con Python: python -m http.server 8080
-   - Después abre: http://localhost:8080/teleprompter.html
+Para aplicar la base de datos:
+  supabase login
+  supabase link --project-ref yyjeihyldqbvkkpswxwg
+  supabase db push
+
+Nunca guardes en el repositorio la contraseña de PostgreSQL, service_role ni
+claves sb_secret_. La publishable key sí está diseñada para el cliente web y
+las políticas RLS protegen el acceso a las tablas.
+
+STAGE NETWORK / WEBSOCKET
+-------------------------
+Instala dependencias:
+  npm install
+
+Inicia el servidor:
+  npm run stage-server
+
+Por defecto escucha en el puerto 8080. En los teléfonos usa:
+  ws://IP-DE-LA-PC:8080
+
+y configura el mismo PIN/token de sala en todos los dispositivos del concierto.
+
+La red V11.1 incluye salas aisladas, validación de rol, heartbeat, límite de
+mensajes, reconexión exponencial, deduplicación y conservación del último estado.
+
+PWA
+---
+Sirve la carpeta desde HTTPS o localhost y abre teleprompter-v11.html.
+El Service Worker solo cachea archivos locales de la app; Supabase y APIs externas
+no se cachean para evitar datos obsoletos.
+
+ELECTRON
+--------
+  npm install
+  npm start
+
+El instalador de escritorio abre automáticamente LiveVoz V11.1.
 
 Autor y derechos:
 © 2026 JOSUE ALEXIS CHAVEZ GUEVARA. Todos los derechos reservados.
-
-Instalador de escritorio:
- - Windows: ejecutar "LiveVoz Teleprompter Setup 1.0.0.exe" para instalar o
-   "LiveVoz Teleprompter 1.0.0.exe" como versión portable.
- - Linux: ejecutar "npm run dist:linux" desde Linux para producir AppImage/DEB.
-   El instalador DEB requiere las herramientas de empaquetado de Linux (fpm).
- - macOS: ejecutar "npm run dist:mac" desde macOS para producir DMG/ZIP y firmar
-   la aplicación con un certificado Apple antes de distribuirla.
-
-Los instaladores Windows incluidos fueron generados para x64. Para distribuirlos
-de forma profesional se recomienda firmar el EXE con un certificado de código.
