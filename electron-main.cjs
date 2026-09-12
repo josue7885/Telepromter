@@ -19,7 +19,7 @@ function createWindow() {
     }
   });
 
-  window.loadFile(path.join(__dirname, "teleprompter.html"), {
+  window.loadFile(path.join(__dirname, "teleprompter-v11.html"), {
     query: { role: "operator" }
   });
 
