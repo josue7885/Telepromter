@@ -41,7 +41,7 @@
           <img id="qr" alt="QR de conexión">
           <div>
             <button id="inviteBtn">Generar QR</button>
-            <div class="invite" id="invite">Genera una invitación temporal para los músicos.</div>
+            <div class="invite" id="invite">Genera una invitación usando la sala y PIN reales del operador.</div>
           </div>
         </div>
       </section>
@@ -56,7 +56,7 @@
     </aside>
     <section class="stage">
       <button class="floating" id="exitConcert">Salir de concierto</button>
-      <iframe src="./teleprompter-v11.html?role=operator" title="LiveVoz Teleprompter"></iframe>
+      <iframe id="teleprompterFrame" src="./teleprompter-v11.html?role=operator" title="LiveVoz Teleprompter"></iframe>
     </section>
   </main>
 </div>
@@ -77,9 +77,42 @@ function renderDevices(rooms){
 }
 function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function refresh(){if(!window.livevozDesktop)return; const t=performance.now(); const s=await livevozDesktop.stageStatus(); text('#latency',Math.max(1,Math.round(performance.now()-t))+'ms'); setStageUi(s)}
-$('#stageBtn').onclick=async()=>{const s=await livevozDesktop.stageStatus(); await (s.running?livevozDesktop.stopStage():livevozDesktop.startStage()); setTimeout(refresh,250)};
+function innerTeleprompterWindow(){
+  try{
+    const wrapper=$('#teleprompterFrame');
+    const inner=wrapper.contentDocument?.getElementById('livevoz-app');
+    return inner?.contentWindow||null;
+  }catch(_e){return null;}
+}
+function getStageContext(){
+  return new Promise(resolve=>{
+    const timer=setTimeout(()=>{window.removeEventListener('message',onMessage);resolve({room:'livevoz-default',token:'',wsUrl:''});},1500);
+    function onMessage(event){
+      if(event.data?.type!=='LIVEVOZ_V13_STAGE_CONTEXT')return;
+      clearTimeout(timer);window.removeEventListener('message',onMessage);resolve(event.data);
+    }
+    window.addEventListener('message',onMessage);
+    const inner=innerTeleprompterWindow();
+    if(!inner){clearTimeout(timer);window.removeEventListener('message',onMessage);return resolve({room:'livevoz-default',token:'',wsUrl:''});}
+    inner.postMessage({type:'LIVEVOZ_V13_GET_STAGE_CONTEXT'},'*');
+  });
+}
+function configureOperatorStage(config){
+  const inner=innerTeleprompterWindow();
+  if(inner)inner.postMessage({type:'LIVEVOZ_V13_SET_STAGE_CONFIG',token:config.token,wsUrl:config.wsUrl},'*');
+}
+$('#stageBtn').onclick=async()=>{const s=await livevozDesktop.stageStatus(); await (s.running?livevozDesktop.stopStage():livevozDesktop.startStage()); setTimeout(refresh,350)};
 $('#preflightBtn').onclick=async()=>{const r=await livevozDesktop.preflight(); $('#preflight').innerHTML=r.checks.map(c=>`<li><span>${escapeHtml(c.name)}</span><b class="${c.ok?'ok':'bad'}">${c.ok?'OK':'REVISAR'}</b></li>`).join('');};
-$('#inviteBtn').onclick=async()=>{const r=await livevozDesktop.createInvite({room:'livevoz-stage'}); if(r.qrDataUrl)$('#qr').src=r.qrDataUrl; text('#invite',r.url||'No se pudo generar la invitación.');};
+$('#inviteBtn').onclick=async()=>{
+  text('#invite','Preparando conexión…');
+  const ctx=await getStageContext();
+  const r=await livevozDesktop.createInvite({room:ctx.room||'livevoz-default',token:ctx.token||''});
+  if(r.error){text('#invite',r.error);return;}
+  if(r.qrDataUrl)$('#qr').src=r.qrDataUrl;
+  configureOperatorStage(r);
+  text('#invite',`Sala: ${r.room} · PIN: ${r.token} · ${r.url}`);
+  setTimeout(refresh,700);
+};
 async function setConcert(v){concert=v;document.body.classList.toggle('concert',v);await livevozDesktop.setConcertMode(v)}
 $('#concertBtn').onclick=()=>setConcert(true); $('#exitConcert').onclick=()=>setConcert(false);
 refresh(); setInterval(refresh,3000);
