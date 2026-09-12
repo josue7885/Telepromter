@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LiveVoz V13 Stage Edition</title>
+<style>
+:root{color-scheme:dark;--bg:#07090d;--panel:#11151d;--line:#242b37;--muted:#8e98aa;--ok:#42d392;--warn:#f5c451;--bad:#ff6677;--accent:#66a3ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f7f9fc;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;height:100vh;overflow:hidden}.app{display:grid;grid-template-rows:auto 1fr;height:100vh}.top{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:10px 14px;background:#0c1016;border-bottom:1px solid var(--line)}.brand{font-weight:800;letter-spacing:.06em}.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:.15em}.status{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.pill{padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#121823;font-size:12px}.pill.ok{border-color:#235f47;color:#9cf0c9}.pill.bad{border-color:#73303b;color:#ff9eaa}.actions{display:flex;gap:8px}button{background:#18202b;color:#fff;border:1px solid #303a49;border-radius:9px;padding:8px 11px;cursor:pointer;font-weight:700}button.primary{background:#155eef;border-color:#3f7fff}button.danger{background:#5d1d27;border-color:#8a3140}.content{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:0}.side{padding:12px;overflow:auto;border-right:1px solid var(--line);background:#0a0d12}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}.card h3{margin:0 0 10px;font-size:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{padding:9px;border-radius:9px;background:#0b0f15;border:1px solid #1e2632}.metric b{display:block;font-size:18px}.metric span{color:var(--muted);font-size:11px}.device{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid #202632}.device:first-child{border-top:0}.dot{width:9px;height:9px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:7px}.device small{color:var(--muted)}.qr{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center}.qr img{width:110px;height:110px;background:#fff;border-radius:8px;padding:6px}.invite{word-break:break-all;color:#b9c5d8;font-size:11px}.preflight li{display:flex;justify-content:space-between;padding:5px 0;color:#d8deea}.preflight .ok{color:var(--ok)}.preflight .bad{color:var(--bad)}.stage{position:relative;min-width:0;background:#000}.stage iframe{width:100%;height:100%;border:0;background:#000}.concert .top{display:none}.concert .content{grid-template-columns:1fr}.concert .side{display:none}.floating{display:none;position:absolute;top:10px;right:10px;z-index:4}.concert .floating{display:block}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">LIVEVOZ <small>V13 STAGE EDITION</small></div>
+    <div class="status">
+      <span class="pill" id="stagePill">Stage Network…</span>
+      <span class="pill" id="ipPill">IP…</span>
+      <span class="pill" id="devicePill">0 dispositivos</span>
+    </div>
+    <div class="actions">
+      <button id="preflightBtn">Preflight</button>
+      <button id="stageBtn" class="primary">Iniciar Stage</button>
+      <button id="concertBtn">Modo concierto</button>
+    </div>
+  </header>
+  <main class="content">
+    <aside class="side">
+      <section class="card">
+        <h3>Estado del escenario</h3>
+        <div class="grid">
+          <div class="metric"><b id="rooms">0</b><span>Salas activas</span></div>
+          <div class="metric"><b id="clients">0</b><span>Dispositivos</span></div>
+          <div class="metric"><b id="latency">—</b><span>Respuesta local</span></div>
+          <div class="metric"><b id="uptime">0m</b><span>Tiempo activo</span></div>
+        </div>
+      </section>
+      <section class="card">
+        <h3>Conexión rápida</h3>
+        <div class="qr">
+          <img id="qr" alt="QR de conexión">
+          <div>
+            <button id="inviteBtn">Generar QR</button>
+            <div class="invite" id="invite">Genera una invitación temporal para los músicos.</div>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <h3>Dispositivos conectados</h3>
+        <div id="devices"><small style="color:var(--muted)">Todavía no hay dispositivos conectados.</small></div>
+      </section>
+      <section class="card">
+        <h3>Preflight</h3>
+        <ul class="preflight" id="preflight" style="list-style:none;padding:0;margin:0"><li><span>Sin ejecutar</span><span>—</span></li></ul>
+      </section>
+    </aside>
+    <section class="stage">
+      <button class="floating" id="exitConcert">Salir de concierto</button>
+      <iframe src="./teleprompter-v11.html?role=operator" title="LiveVoz Teleprompter"></iframe>
+    </section>
+  </main>
+</div>
+<script>
+const $=s=>document.querySelector(s); let concert=false;
+function text(id,v){$(id).textContent=v}
+function setStageUi(s){
+  const running=!!s.running; const health=s.health||{};
+  $('#stagePill').className='pill '+(running?'ok':'bad'); text('#stagePill',running?'Stage Network activo':'Stage Network detenido');
+  text('#ipPill',s.ip?`${s.ip}:${s.port}`:`Puerto ${s.port||8080}`); text('#devicePill',`${health.clients||0} dispositivos`);
+  text('#rooms',health.rooms||0); text('#clients',health.clients||0); text('#uptime',health.uptimeSeconds?Math.floor(health.uptimeSeconds/60)+'m':'0m');
+  $('#stageBtn').textContent=running?'Detener Stage':'Iniciar Stage'; $('#stageBtn').className=running?'danger':'primary';
+  renderDevices(s.rooms||[]);
+}
+function renderDevices(rooms){
+  const items=rooms.flatMap(r=>(r.devices||[]).map(d=>({...d,room:r.id})));
+  $('#devices').innerHTML=items.length?items.map(d=>`<div class="device"><div><span class="dot"></span><b>${escapeHtml(d.device||'Dispositivo')}</b><br><small>${escapeHtml(d.role||'unknown')} · ${escapeHtml(d.room||'')}</small></div><small>${Math.max(0,Math.round((Date.now()-(d.lastSeen||Date.now()))/1000))}s</small></div>`).join(''):'<small style="color:var(--muted)">Todavía no hay dispositivos conectados.</small>';
+}
+function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function refresh(){if(!window.livevozDesktop)return; const t=performance.now(); const s=await livevozDesktop.stageStatus(); text('#latency',Math.max(1,Math.round(performance.now()-t))+'ms'); setStageUi(s)}
+$('#stageBtn').onclick=async()=>{const s=await livevozDesktop.stageStatus(); await (s.running?livevozDesktop.stopStage():livevozDesktop.startStage()); setTimeout(refresh,250)};
+$('#preflightBtn').onclick=async()=>{const r=await livevozDesktop.preflight(); $('#preflight').innerHTML=r.checks.map(c=>`<li><span>${escapeHtml(c.name)}</span><b class="${c.ok?'ok':'bad'}">${c.ok?'OK':'REVISAR'}</b></li>`).join('');};
+$('#inviteBtn').onclick=async()=>{const r=await livevozDesktop.createInvite({room:'livevoz-stage'}); if(r.qrDataUrl)$('#qr').src=r.qrDataUrl; text('#invite',r.url||'No se pudo generar la invitación.');};
+async function setConcert(v){concert=v;document.body.classList.toggle('concert',v);await livevozDesktop.setConcertMode(v)}
+$('#concertBtn').onclick=()=>setConcert(true); $('#exitConcert').onclick=()=>setConcert(false);
+refresh(); setInterval(refresh,3000);
+</script>
+</body>
+</html>
