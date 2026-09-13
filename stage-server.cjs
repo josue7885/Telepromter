@@ -13,10 +13,10 @@ const CLIENT_TIMEOUT_MS = 45000;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_CLIENTS_PER_ROOM = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_ROOM || 40);
 const MAX_CLIENTS_PER_IP = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_IP || 12);
-const PROTOCOL_VERSION = "14.0";
+const PROTOCOL_VERSION = "14.1";
 const rooms = new Map();
 const ipCounters = new Map();
-const metrics = {connections:0,messages:0,rejected:0,roomsCreated:0,startTime:Date.now()};
+const metrics = {connections:0,messages:0,rejected:0,roomsCreated:0,reconnectReplacements:0,resyncRequests:0,startTime:Date.now()};
 
 const STATIC_FILES = new Map([
   ["/app", ["teleprompter-v11.html", "text/html; charset=utf-8"]],
@@ -27,6 +27,7 @@ const STATIC_FILES = new Map([
   ["/livevoz-v13-2-sync.js", ["livevoz-v13-2-sync.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-runtime.js", ["livevoz-v14-runtime.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-cloud.js", ["livevoz-v14-cloud.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-v14-1-polish.js", ["livevoz-v14-1-polish.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-logo.png", ["livevoz-logo.png", "image/png"]],
   ["/manifest.webmanifest", ["manifest.webmanifest", "application/manifest+json; charset=utf-8"]],
   ["/sw.js", ["sw.js", "text/javascript; charset=utf-8"]]
@@ -41,7 +42,7 @@ function clientIp(req){return safeText((req.headers["x-forwarded-for"]||"").spli
 function getRoom(name,token){if(!rooms.has(name)){rooms.set(name,{clients:new Set(),tokenHash:hashToken(token),lastState:null,createdAt:now(),updatedAt:now()});metrics.roomsCreated++;}return rooms.get(name);}
 function incIp(ip){ipCounters.set(ip,(ipCounters.get(ip)||0)+1);}
 function decIp(ip){const next=Math.max(0,(ipCounters.get(ip)||1)-1);if(next===0)ipCounters.delete(ip);else ipCounters.set(ip,next);}
-function leaveRoom(ws){const room=ws.livevozRoom&&rooms.get(ws.livevozRoom);if(room){room.clients.delete(ws);room.updatedAt=now();}if(ws.livevozIp)decIp(ws.livevozIp);}
+function leaveRoom(ws){if(ws.livevozLeft)return;ws.livevozLeft=true;const room=ws.livevozRoom&&rooms.get(ws.livevozRoom);if(room){room.clients.delete(ws);room.updatedAt=now();}if(ws.livevozIp)decIp(ws.livevozIp);}
 function send(ws,obj){if(ws.readyState===WebSocket.OPEN){try{ws.send(JSON.stringify(obj));}catch(_e){}}}
 function relay(room,sender,message){const encoded=JSON.stringify(message);if(Buffer.byteLength(encoded)>MAX_MESSAGE_BYTES)return;for(const peer of room.clients){if(peer!==sender&&peer.readyState===WebSocket.OPEN)peer.send(encoded);}}
 function closeWith(ws,code,reason){metrics.rejected++;try{ws.close(code,reason);}catch(_e){}}
@@ -95,10 +96,14 @@ wss.on("connection",(ws,req)=>{
   const room=getRoom(roomId,token);
   const incomingTokenHash=hashToken(token);
   if(room.tokenHash!==incomingTokenHash&&room.clients.size===0&&room.tokenHash===hashToken("")&&token){room.tokenHash=incomingTokenHash;room.updatedAt=now();}
-  if(room.clients.size>=MAX_CLIENTS_PER_ROOM)return closeWith(ws,4002,"room-full");
   if(room.tokenHash!==incomingTokenHash)return closeWith(ws,4001,"invalid-room-token");
 
-  ws.livevozRoom=roomId;ws.livevozDevice=device;ws.livevozRole=role;ws.livevozName=name;ws.livevozInstrument=instrument;ws.livevozTranspose=transpose;ws.livevozIp=ip;ws.isAlive=true;ws.lastSeen=now();
+  for(const peer of [...room.clients]){
+    if(peer.livevozDevice===device){metrics.reconnectReplacements++;leaveRoom(peer);try{peer.close(4000,"replaced-by-reconnect");}catch(_e){try{peer.terminate();}catch(_e2){}}}
+  }
+  if(room.clients.size>=MAX_CLIENTS_PER_ROOM)return closeWith(ws,4002,"room-full");
+
+  ws.livevozRoom=roomId;ws.livevozDevice=device;ws.livevozRole=role;ws.livevozName=name;ws.livevozInstrument=instrument;ws.livevozTranspose=transpose;ws.livevozIp=ip;ws.isAlive=true;ws.lastSeen=now();ws.livevozLeft=false;
   room.clients.add(ws);room.updatedAt=now();incIp(ip);metrics.connections++;
 
   send(ws,{type:"WELCOME",payload:{protocol:PROTOCOL_VERSION,roomId,serverTime:now(),compatible:!protocol||protocol.startsWith("14")||protocol.startsWith("13")||protocol.startsWith("12")||protocol.startsWith("11")},timestamp:now(),messageId:`server:${crypto.randomUUID()}`,senderId:"server",senderRole:"server",roomId});
@@ -112,20 +117,25 @@ wss.on("connection",(ws,req)=>{
     if(!msg||typeof msg!=="object")return;
     if(msg.roomId!==roomId)return;
     if(msg.senderId!==device||msg.senderRole!==ws.livevozRole)return;
-    const allowed=new Set(["STATE","COMMAND","PING","PONG","DEVICE_JOIN","DEVICE_LEAVE","DEVICE_PROFILE","SIGNAL","COUNTDOWN","PRELOAD","LOCK_STAGE","PRIVATE_NOTE","DEVICE_TELEMETRY","STAGE_MODE"]);
+    const allowed=new Set(["STATE","COMMAND","PING","PONG","DEVICE_JOIN","DEVICE_LEAVE","DEVICE_PROFILE","SIGNAL","COUNTDOWN","PRELOAD","LOCK_STAGE","PRIVATE_NOTE","DEVICE_TELEMETRY","STAGE_MODE","RESYNC_REQUEST"]);
     if(!allowed.has(msg.type))return;
     const operatorOnly=new Set(["STATE","COMMAND","SIGNAL","COUNTDOWN","PRELOAD","LOCK_STAGE","PRIVATE_NOTE","STAGE_MODE"]);
     if(operatorOnly.has(msg.type)&&ws.livevozRole!=="operator")return;
     if(["DEVICE_JOIN","DEVICE_PROFILE","PING","PONG"].includes(msg.type))applyProfile(ws,msg.payload||{});
     if(msg.type==="DEVICE_TELEMETRY")applyTelemetry(ws,msg.payload||{});
     if(msg.type==="STATE"&&ws.livevozRole==="operator")room.lastState=msg;
+    if(msg.type==="RESYNC_REQUEST"){
+      metrics.resyncRequests++;
+      if(room.lastState)send(ws,room.lastState);
+      return;
+    }
     relay(room,ws,msg);
   });
   ws.on("close",()=>leaveRoom(ws));
   ws.on("error",()=>leaveRoom(ws));
 });
 
-const heartbeat=setInterval(()=>{const t=now();for(const [roomId,room]of rooms){for(const ws of room.clients){if(!ws.isAlive||t-ws.lastSeen>CLIENT_TIMEOUT_MS){try{ws.terminate();}catch(_e){}continue;}ws.isAlive=false;try{ws.ping();}catch(_e){}}if(room.clients.size===0&&t-room.updatedAt>ROOM_TTL_MS)rooms.delete(roomId);}},HEARTBEAT_MS);heartbeat.unref();
+const heartbeat=setInterval(()=>{const t=now();for(const [roomId,room]of rooms){for(const ws of room.clients){if(!ws.isAlive||t-ws.lastSeen>CLIENT_TIMEOUT_MS){leaveRoom(ws);try{ws.terminate();}catch(_e){}continue;}ws.isAlive=false;try{ws.ping();}catch(_e){}}if(room.clients.size===0&&t-room.updatedAt>ROOM_TTL_MS)rooms.delete(roomId);}},HEARTBEAT_MS);heartbeat.unref();
 server.on("error",error=>{if(error?.code==="EADDRINUSE")console.error(`LiveVoz Stage Network: el puerto ${PORT} ya está en uso.`);else console.error("LiveVoz Stage Network:",error);});
 server.listen(PORT,HOST,()=>console.log(`LiveVoz Stage Network v${PROTOCOL_VERSION} escuchando en ws://${HOST}:${PORT}`));
 process.on("SIGINT",()=>{clearInterval(heartbeat);wss.close(()=>server.close(()=>process.exit(0)));});
