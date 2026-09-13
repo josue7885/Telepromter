@@ -1,0 +1,96 @@
+(()=>{
+  "use strict";
+  const V14="14.0";
+  const STORE={history:"livevoz_v14_history",parts:"livevoz_v14_parts",blocks:"livevoz_v14_blocks",mode:"livevoz_v14_mode",lock:"livevoz_v14_lock",profile:"livevoz_v14_profile"};
+  const ALLOWED=["STATE","COMMAND","PING","PONG","DEVICE_JOIN","DEVICE_LEAVE","DEVICE_PROFILE","SIGNAL","COUNTDOWN","PRELOAD","LOCK_STAGE","PRIVATE_NOTE","DEVICE_TELEMETRY","STAGE_MODE"];
+  const q=new URLSearchParams(location.search);
+  const isOperator=()=>typeof currentRole!=="undefined"&&currentRole==="operator";
+  const safe=(v,n=500)=>typeof v==="string"?v.slice(0,n):"";
+  const clamp=(n,min,max,d=0)=>Math.max(min,Math.min(max,Number.isFinite(Number(n))?Number(n):d));
+  const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||"")||d}catch(_e){return d}};
+  const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(_e){}};
+  const stageRoom=()=>String(localStorage.getItem("livevoz_stage_session_room")||currentConcertId||concertName||"livevoz-default").trim();
+  const stageToken=()=>String(localStorage.getItem("livevoz_ws_room_token")||"").trim();
+  const instrument=()=>String(localStorage.getItem("livevoz_mobile_instrument")||"").trim();
+  let seq=0,preloaded=null,countdownTimer=null,wakeLock=null,lastTelemetry=0;
+  let stageMode=localStorage.getItem(STORE.mode)||"normal";
+  let stageLocked=localStorage.getItem(STORE.lock)==="1";
+
+  function envelope(type,payload){return{type,payload:payload||{},messageId:`${deviceId}:v14:${Date.now().toString(36)}:${++seq}`,senderId:deviceId,senderRole:currentRole,roomId:stageRoom(),roomToken:stageToken(),timestamp:Date.now(),sequence:seq,version:V14};}
+  function rawSend(type,payload){if(!ALLOWED.includes(type))return;const msg=envelope(type,payload);try{localChannel?.postMessage(msg)}catch(_e){};if(ws&&ws.readyState===WebSocket.OPEN){try{ws.send(JSON.stringify(msg))}catch(_e){}}}
+  const oldBroadcast=typeof broadcastMessage==="function"?broadcastMessage:null;
+  broadcastMessage=function(message){const type=String(message?.type||"");if(ALLOWED.includes(type))return rawSend(type,message?.payload||{});return oldBroadcast?.(message)};
+
+  function currentSong(){return playlist?.[currentSongIndex]||null}
+  function currentConcert(){return concerts?.find?.(c=>c.id===currentConcertId)||null}
+  function estimateSeconds(song){if(!song)return 0;const lyrics=Array.isArray(song.lyrics)?song.lyrics.length:0;const bpm=clamp(song.bpm,30,250,100);return Math.max(90,Math.round((lyrics*12)*(100/bpm)))}
+  function currentBlock(){const blocks=load(STORE.blocks,{});return blocks?.[currentConcertId]?.[currentSong()?.id]||"General"}
+  function currentParts(){const parts=load(STORE.parts,{});return parts?.[currentSong()?.id]||{}}
+  const oldState=typeof getCurrentState==="function"?getCurrentState:null;
+  if(oldState)getCurrentState=function(){const base=oldState();const song=currentSong(),concert=currentConcert();return{...base,stageMode,stageLocked,block:currentBlock(),songDurationEstimate:estimateSeconds(song),nextSongId:playlist?.[currentSongIndex+1]?.id||null,nextSongTitle:safe(playlist?.[currentSongIndex+1]?.title,160),instrumentNotes:currentParts(),concertSongIds:Array.isArray(concert?.songIds)?concert.songIds.slice(0,300):base.concertSongIds||[]}};
+
+  function history(action,details={}){const rows=load(STORE.history,[]);rows.unshift({at:new Date().toISOString(),action,details});save(STORE.history,rows.slice(0,250));}
+  function fmtTime(sec){sec=Math.max(0,Math.round(sec||0));return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`}
+  function showBanner(text,kind="info",ms=3500){let el=document.getElementById("lv14-banner");if(!el){el=document.createElement("div");el.id="lv14-banner";el.style.cssText="position:fixed;z-index:99999;left:50%;top:18px;transform:translateX(-50%);max-width:min(92vw,850px);padding:16px 22px;border-radius:14px;font:900 clamp(18px,4vw,34px) system-ui;text-align:center;background:#111;color:#fff;border:2px solid #f1c40f;box-shadow:0 20px 70px #000b;display:none";document.body.appendChild(el)}el.textContent=text;el.style.borderColor=kind==="danger"?"#ff6677":kind==="ok"?"#42d392":"#f1c40f";el.style.display="block";clearTimeout(el._t);el._t=setTimeout(()=>el.style.display="none",ms)}
+  function applyLock(v){stageLocked=!!v;localStorage.setItem(STORE.lock,stageLocked?"1":"0");document.body.classList.toggle("lv14-locked",stageLocked);let s=document.getElementById("lv14-lock-style");if(!s){s=document.createElement("style");s.id="lv14-lock-style";s.textContent="body.lv14-locked:not(.operator) .role-selector{pointer-events:none;opacity:.55}#lv14-lock-pill{position:fixed;right:12px;bottom:42px;z-index:9999;padding:7px 10px;border-radius:999px;background:#3a1717;color:#ffb0b0;font:800 11px system-ui;display:none}body.lv14-locked #lv14-lock-pill{display:block}";document.head.appendChild(s)}let p=document.getElementById("lv14-lock-pill");if(!p){p=document.createElement("div");p.id="lv14-lock-pill";p.textContent="🔒 Escenario bloqueado";document.body.appendChild(p)}}
+  async function keepAwake(on){try{if(on&&"wakeLock"in navigator&&!wakeLock)wakeLock=await navigator.wakeLock.request("screen");if(!on&&wakeLock){await wakeLock.release();wakeLock=null}}catch(_e){}}
+
+  function handleSignal(p={}){const label=safe(p.label||p.message,120)||"SEÑAL";showBanner(label,p.kind||"info",Number(p.ms)||3500);try{navigator.vibrate?.(p.vibrate||[120,60,120])}catch(_e){}history("signal_received",{label})}
+  function startCountdown(p={}){clearInterval(countdownTimer);const seconds=Math.max(1,Math.min(120,Number(p.seconds)||10));const startAt=Number(p.startAt)||Date.now();const end=startAt+seconds*1000;const tick=()=>{const left=Math.ceil((end-Date.now())/1000);if(left<=0){clearInterval(countdownTimer);showBanner("¡YA!","ok",1800);return}showBanner(`⏱ ${left}`,"info",1100)};tick();countdownTimer=setInterval(tick,250)}
+  function applyPrivateNote(p={}){const target=safe(p.targetInstrument,40);if(target&&target!==instrument())return;const text=safe(p.text,500);if(text)showBanner(`📝 ${text}`,"info",7000)}
+  function applyStageMode(p={}){stageMode=["normal","serenata","boda","ensayo"].includes(p.mode)?p.mode:"normal";localStorage.setItem(STORE.mode,stageMode);document.documentElement.dataset.livevozMode=stageMode;showBanner(`Modo ${stageMode.toUpperCase()}`,"ok",1800)}
+  function applyPreload(p={}){preloaded=p;let el=document.getElementById("lv14-preload-pill");if(!el){el=document.createElement("div");el.id="lv14-preload-pill";el.style.cssText="position:fixed;left:12px;bottom:42px;z-index:9998;padding:7px 10px;border-radius:999px;background:#10263a;color:#9fd5ff;font:800 11px system-ui";document.body.appendChild(el)}el.textContent=`⏭ Preparada: ${safe(p.songTitle,100)||"siguiente canción"}`}
+
+  const oldHandle=typeof handleNetworkMessage==="function"?handleNetworkMessage:null;
+  if(oldHandle)handleNetworkMessage=function(message,transport="unknown"){
+    const type=String(message?.type||"");
+    if(type==="SIGNAL")handleSignal(message.payload);
+    else if(type==="COUNTDOWN")startCountdown(message.payload);
+    else if(type==="PRELOAD")applyPreload(message.payload);
+    else if(type==="LOCK_STAGE")applyLock(!!message.payload?.locked);
+    else if(type==="PRIVATE_NOTE")applyPrivateNote(message.payload);
+    else if(type==="STAGE_MODE")applyStageMode(message.payload);
+    else if(type==="DEVICE_TELEMETRY"&&isOperator())registerDevice?.({...message.payload,online:true,lastSeen:Date.now()});
+    return oldHandle(message,transport);
+  };
+
+  function nextSongPayload(){const s=playlist?.[currentSongIndex+1];if(!s)return null;return{songId:s.id,songTitle:s.title,key:s.key,bpm:s.bpm,lyrics:(s.lyrics||[]).slice(0,8),chords:(s.chords||[]).slice(0,8),cue:(s.cues||[]).slice(0,8)}}
+  function sendSignal(label,kind="info"){rawSend("SIGNAL",{label,kind,vibrate:[120,60,120],ms:3500});handleSignal({label,kind});history("signal_sent",{label})}
+  function prepareNext(){const p=nextSongPayload();if(!p)return showToast?.("No hay siguiente canción","warning");rawSend("PRELOAD",p);applyPreload(p);history("preload",p);showToast?.(`⏭ Preparada: ${p.songTitle}`)}
+  function launchNext(){if(typeof nextSong==="function"){nextSong(true);history("launch_next",{song:currentSong()?.title})}}
+  function toggleLock(){applyLock(!stageLocked);rawSend("LOCK_STAGE",{locked:stageLocked});keepAwake(stageLocked);history("stage_lock",{locked:stageLocked});renderDirector()}
+  function setMode(mode){applyStageMode({mode});rawSend("STAGE_MODE",{mode});history("stage_mode",{mode});renderDirector()}
+  function setBlock(block){const song=currentSong();if(!song)return;const all=load(STORE.blocks,{});all[currentConcertId]||={};all[currentConcertId][song.id]=block;save(STORE.blocks,all);broadcastCurrentState?.(true);history("block_set",{song:song.title,block});renderDirector()}
+  function savePart(){const song=currentSong();if(!song)return;const sel=document.getElementById("lv14-part-instrument"),txt=document.getElementById("lv14-part-text");if(!sel||!txt)return;const all=load(STORE.parts,{});all[song.id]||={};all[song.id][sel.value]=txt.value.trim();save(STORE.parts,all);broadcastCurrentState?.(true);history("part_saved",{song:song.title,instrument:sel.value});showToast?.("Parte guardada")}
+  function sendPart(){const sel=document.getElementById("lv14-part-instrument"),txt=document.getElementById("lv14-part-text");if(!sel||!txt||!txt.value.trim())return;rawSend("PRIVATE_NOTE",{targetInstrument:sel.value,text:txt.value.trim()});history("private_note",{instrument:sel.value})}
+
+  async function collectTelemetry(){const now=Date.now();if(now-lastTelemetry<15000)return;lastTelemetry=now;let battery=null,charging=null;try{const b=await navigator.getBattery?.();if(b){battery=Math.round(b.level*100);charging=!!b.charging}}catch(_e){}const conn=navigator.connection||{};rawSend("DEVICE_TELEMETRY",{deviceId,name:deviceName,role:currentRole,instrument:instrument(),battery,charging,network:conn.effectiveType||"",downlink:conn.downlink||null,transpose:Number(localStorage.getItem("livevoz_mobile_transpose"))||0})}
+
+  function preflight(){const issues=[];const songCount=playlist?.length||0;const current=currentSong();if(!songCount)issues.push("Biblioteca vacía");if(!current)issues.push("No hay canción actual");const missing=(playlist||[]).filter(s=>!s.title||!s.key||!s.bpm||!Array.isArray(s.lyrics)||!s.lyrics.length).slice(0,8);if(missing.length)issues.push(`${missing.length} canciones con datos incompletos`);if(!(ws&&ws.readyState===WebSocket.OPEN))issues.push("Stage Network no está conectado");const devices=(connectedDevices||[]).filter(d=>d.online).length;return{ok:issues.length===0,issues,songCount,devices,room:stageRoom()}}
+  function renderHistory(){return load(STORE.history,[]).slice(0,12).map(x=>`<div style="padding:7px 0;border-bottom:1px solid #2b2b2b"><b>${escapeHtml(x.action)}</b><small style="display:block;color:#777">${new Date(x.at).toLocaleTimeString()}</small></div>`).join("")||"<small>Sin actividad todavía.</small>"}
+  function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+  function directorHTML(){const pf=preflight(),song=currentSong(),next=playlist?.[currentSongIndex+1],total=(currentConcert()?.songIds||[]).map(id=>playlist.find(s=>s.id===id)).filter(Boolean).reduce((n,s)=>n+estimateSeconds(s),0);return `
+  <div class="modal"><div class="modal-header"><div><h2>🎛 LiveVoz V14 · Stage Director</h2><small style="color:#888">${escapeHtml(concertName)} · ${escapeHtml(stageRoom())}</small></div><button class="close-btn" onclick="closeModal('lv14-director')">×</button></div>
+  <div class="stage-stat-grid"><div class="stat-box"><div class="stat-label">Actual</div><div class="stat-value">${escapeHtml(song?.title||"—")}</div></div><div class="stat-box"><div class="stat-label">Siguiente</div><div class="stat-value">${escapeHtml(next?.title||"—")}</div></div><div class="stat-box"><div class="stat-label">Duración aprox.</div><div class="stat-value">${fmtTime(total)}</div></div></div>
+  <div class="modal-section"><b>Control de escenario</b><div class="modal-actions" style="flex-wrap:wrap"><button class="small-btn active" id="lv14-prep">⏭ Preparar siguiente</button><button class="small-btn" id="lv14-launch">▶ Lanzar siguiente</button><button class="small-btn" id="lv14-count">⏱ Cuenta 10s</button><button class="small-btn ${stageLocked?'active':''}" id="lv14-lock">${stageLocked?'🔓 Desbloquear':'🔒 Bloquear'}</button></div></div>
+  <div class="modal-section"><b>Señales rápidas</b><div class="modal-actions" style="flex-wrap:wrap">${["INTRO","CORO","SOLO","CORTE","REPITE","ÚLTIMA","FINAL"].map(x=>`<button class="small-btn lv14-signal" data-signal="${x}">${x}</button>`).join("")}</div></div>
+  <div class="modal-section"><b>Modo del evento</b><div class="modal-actions">${["normal","serenata","boda","ensayo"].map(x=>`<button class="small-btn ${stageMode===x?'active':''} lv14-mode" data-mode="${x}">${x}</button>`).join("")}</div><div class="form-group" style="margin-top:10px"><label>Bloque de la canción actual</label><select id="lv14-block"><option>General</option><option>Entrada</option><option>Cena</option><option>Románticas</option><option>Baile</option><option>Serenata</option><option>Cumpleaños</option><option>Cierre</option></select></div></div>
+  <div class="modal-section"><b>Parte / nota por instrumento</b><div class="modal-grid"><div class="form-group"><label>Instrumento</label><select id="lv14-part-instrument"><option value="guitar">Guitarra</option><option value="bass">Bajo</option><option value="bajo_quinto">Bajo quinto</option><option value="keyboard">Teclado</option><option value="accordion">Acordeón</option><option value="trumpet_bb">Trompeta Sib</option><option value="tenor_sax_bb">Sax tenor Sib</option><option value="alto_sax_eb">Sax alto Mib</option><option value="drums">Batería</option><option value="percussion">Percusión</option><option value="singer">Cantante</option></select></div><div class="form-group"><label>Nota</label><input id="lv14-part-text" placeholder="Ej. Entrar después del segundo coro"></div></div><div class="modal-actions"><button class="small-btn active" id="lv14-save-part">Guardar</button><button class="small-btn" id="lv14-send-part">Enviar ahora</button></div></div>
+  <div class="modal-section"><b>Preflight</b><div style="padding:10px;border:1px solid #2b2b2b;border-radius:8px;margin-top:8px;color:${pf.ok?'#42d392':'#f5c451'}">${pf.ok?'✅ LISTO PARA CONCIERTO':`⚠ ${escapeHtml(pf.issues.join(' · '))}`}<small style="display:block;color:#888;margin-top:5px">${pf.songCount} canciones · ${pf.devices} dispositivos</small></div></div>
+  <div class="modal-section"><b>Historial reciente</b><div id="lv14-history" style="max-height:180px;overflow:auto;margin-top:8px">${renderHistory()}</div></div></div>`}
+  function bindDirector(){document.getElementById("lv14-prep")?.addEventListener("click",prepareNext);document.getElementById("lv14-launch")?.addEventListener("click",launchNext);document.getElementById("lv14-count")?.addEventListener("click",()=>{const p={seconds:10,startAt:Date.now()+500};rawSend("COUNTDOWN",p);startCountdown(p);history("countdown",{seconds:10})});document.getElementById("lv14-lock")?.addEventListener("click",toggleLock);document.querySelectorAll(".lv14-signal").forEach(b=>b.addEventListener("click",()=>sendSignal(b.dataset.signal,b.dataset.signal==="FINAL"?"danger":"info")));document.querySelectorAll(".lv14-mode").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));const block=document.getElementById("lv14-block");if(block){block.value=currentBlock();block.addEventListener("change",()=>setBlock(block.value))}const inst=document.getElementById("lv14-part-instrument"),txt=document.getElementById("lv14-part-text");const sync=()=>{if(txt)txt.value=currentParts()?.[inst?.value]||""};inst?.addEventListener("change",sync);sync();document.getElementById("lv14-save-part")?.addEventListener("click",savePart);document.getElementById("lv14-send-part")?.addEventListener("click",sendPart)}
+  function renderDirector(){const modal=document.getElementById("lv14-director");if(modal&&modal.classList.contains("show")){modal.innerHTML=directorHTML();bindDirector()}}
+  function openDirector(){let modal=document.getElementById("lv14-director");if(!modal){modal=document.createElement("div");modal.id="lv14-director";modal.className="modal-overlay";document.body.appendChild(modal)}modal.innerHTML=directorHTML();bindDirector();openModal?.("lv14-director")}
+
+  function installUI(){document.body.classList.toggle("operator",isOperator());const sub=document.querySelector(".brand-sub");if(sub)sub.textContent="V14 · STAGE DIRECTOR · FULL SYNC";if(isOperator()){const actions=document.querySelector(".toolbar-actions");if(actions&&!document.getElementById("lv14-director-btn")){const b=document.createElement("button");b.id="lv14-director-btn";b.className="small-btn active";b.textContent="🎛 V14 Director";b.addEventListener("click",openDirector);actions.appendChild(b)}}applyLock(stageLocked);document.documentElement.dataset.livevozMode=stageMode}
+
+  const oldSelect=typeof selectSong==="function"?selectSong:null;if(oldSelect)selectSong=function(index,shouldBroadcast=true){const r=oldSelect(index,shouldBroadcast);if(r!==false&&isOperator())history("song_change",{song:currentSong()?.title,index});return r};
+  const oldConcert=typeof activateConcert==="function"?activateConcert:null;if(oldConcert)activateConcert=function(id){oldConcert(id);if(isOperator())history("concert_change",{id,name:concertName});renderDirector()};
+  const oldRole=typeof switchRole==="function"?switchRole:null;if(oldRole)switchRole=function(role,shouldBroadcast=true){oldRole(role,shouldBroadcast);document.body.classList.toggle("operator",role==="operator");installUI()};
+
+  function bindKeys(){window.addEventListener("keydown",e=>{if(!isOperator())return;if(e.key==="F8"){e.preventDefault();prepareNext()}if(e.key==="F9"){e.preventDefault();launchNext()}if(e.key==="F10"){e.preventDefault();sendSignal("CORO")}if(e.key==="F11"){e.preventDefault();toggleLock()}})}
+  async function initMidi(){if(!isOperator()||!navigator.requestMIDIAccess)return;try{const access=await navigator.requestMIDIAccess();for(const input of access.inputs.values())input.onmidimessage=e=>{const [status,note,vel]=e.data;if((status&0xf0)!==0x90||!vel)return;if(note===36)prevLine?.();if(note===37)nextLine?.();if(note===38)goToChorus?.();if(note===39)sendSignal("FINAL","danger")}}catch(_e){}}
+
+  function boot(){try{document.title="LiveVoz V14 Stage Director";installUI();bindKeys();initMidi();collectTelemetry();setInterval(collectTelemetry,15000);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&stageLocked)keepAwake(true)});console.info("LiveVoz V14 Stage Director activo")}catch(e){console.error("LiveVoz V14",e)}}
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else setTimeout(boot,0);
+})();
