@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, session, ipcMain } = require("electron");
+const { app, BrowserWindow, Menu, shell, session, ipcMain, screen } = require("electron");
 const path = require("node:path");
 const os = require("node:os");
 const http = require("node:http");
@@ -8,6 +8,7 @@ const QRCode = require("qrcode");
 const isDevelopment = !app.isPackaged;
 const STAGE_PORT = Number(process.env.LIVEVOZ_WS_PORT || 8080);
 let mainWindow = null;
+let displayWindow = null;
 let stageProcess = null;
 
 function isAllowedExternal(url) {
@@ -84,6 +85,65 @@ async function stopStage() {
   return stageStatus();
 }
 
+function hardenWindow(win) {
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("file:")) return { action: "allow" };
+    if (isAllowedExternal(url)) shell.openExternal(url);
+    return { action: "deny" };
+  });
+  win.webContents.on("will-navigate", (event, url) => {
+    if (!url.startsWith("file:")) {
+      event.preventDefault();
+      if (isAllowedExternal(url)) shell.openExternal(url);
+    }
+  });
+  win.webContents.on("render-process-gone", (_event, details) => {
+    console.error("LiveVoz renderer finalizado:", details.reason);
+  });
+}
+
+function openStageDisplay(role = "singer") {
+  const allowed = new Set(["singer", "musician", "hybrid"]);
+  const selectedRole = allowed.has(role) ? role : "singer";
+  if (displayWindow && !displayWindow.isDestroyed()) {
+    displayWindow.close();
+    displayWindow = null;
+  }
+  const displays = screen.getAllDisplays();
+  const primary = screen.getPrimaryDisplay();
+  const target = displays.find((d) => d.id !== primary.id) || primary;
+  displayWindow = new BrowserWindow({
+    x: target.bounds.x,
+    y: target.bounds.y,
+    width: target.bounds.width,
+    height: target.bounds.height,
+    backgroundColor: "#000000",
+    autoHideMenuBar: true,
+    fullscreen: true,
+    show: false,
+    icon: path.join(__dirname, "livevoz-logo.png"),
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      devTools: isDevelopment
+    }
+  });
+  hardenWindow(displayWindow);
+  displayWindow.once("ready-to-show", () => displayWindow?.show());
+  displayWindow.on("closed", () => { displayWindow = null; });
+  displayWindow.loadFile(path.join(__dirname, "teleprompter-v11.html"), { query: { role: selectedRole, display: "1" } });
+  return { opened: true, role: selectedRole, displayId: target.id, external: target.id !== primary.id };
+}
+
+function closeStageDisplay() {
+  if (displayWindow && !displayWindow.isDestroyed()) displayWindow.close();
+  displayWindow = null;
+  return true;
+}
+
 function registerIpc() {
   ipcMain.handle("livevoz:stage-status", () => stageStatus());
   ipcMain.handle("livevoz:start-stage", () => startStage());
@@ -94,8 +154,9 @@ function registerIpc() {
     return {
       checks: [
         { name: "Stage Network", ok: status.running },
+        { name: "Protocolo Stage V14", ok: String(status.health?.protocol || "").startsWith("14") },
         { name: "Dirección IPv4 local", ok: Boolean(status.ip && status.ip !== "127.0.0.1") },
-        { name: "Puerto 8080 / configurado", ok: Boolean(status.port) },
+        { name: "Puerto Stage configurado", ok: Boolean(status.port) },
         { name: "Servidor responde", ok: Boolean(status.health?.ok) },
         { name: "Tiempo de respuesta < 1.5 s", ok: Date.now() - started < 1500 }
       ]
@@ -125,6 +186,8 @@ function registerIpc() {
     mainWindow.setFullScreen(Boolean(enabled));
     return mainWindow.isFullScreen();
   });
+  ipcMain.handle("livevoz:open-stage-display", (_event, role) => openStageDisplay(role));
+  ipcMain.handle("livevoz:close-stage-display", () => closeStageDisplay());
 }
 
 function createWindow() {
@@ -150,25 +213,8 @@ function createWindow() {
 
   mainWindow.once("ready-to-show", () => mainWindow.show());
   mainWindow.loadFile(path.join(__dirname, "livevoz-v13-stage.html"));
-
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("file:")) return { action: "allow" };
-    if (isAllowedExternal(url)) shell.openExternal(url);
-    return { action: "deny" };
-  });
-
-  mainWindow.webContents.on("will-navigate", (event, url) => {
-    if (!url.startsWith("file:")) {
-      event.preventDefault();
-      if (isAllowedExternal(url)) shell.openExternal(url);
-    }
-  });
-
-  mainWindow.webContents.on("render-process-gone", (_event, details) => {
-    console.error("LiveVoz renderer finalizado:", details.reason);
-  });
-
-  mainWindow.on("closed", () => { mainWindow = null; });
+  hardenWindow(mainWindow);
+  mainWindow.on("closed", () => { mainWindow = null; closeStageDisplay(); });
 }
 
 app.whenReady().then(() => {
@@ -176,7 +222,7 @@ app.whenReady().then(() => {
   registerIpc();
 
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-    const allowed = new Set(["media", "notifications", "fullscreen"]);
+    const allowed = new Set(["media", "notifications", "fullscreen", "midi", "midiSysex"]);
     callback(allowed.has(permission));
   });
 
@@ -188,6 +234,7 @@ app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
+  closeStageDisplay();
   if (stageProcess) {
     try { stageProcess.kill("SIGTERM"); } catch (_e) {}
     stageProcess = null;
