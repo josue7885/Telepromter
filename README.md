@@ -1,6 +1,6 @@
-# LiveVoz V14 — Stage Director
+# LiveVoz V14.1 — Stage Director
 
-LiveVoz es un teleprompter y sistema de dirección de escenario para conciertos, serenatas, bodas y ensayos. V14 mantiene la sincronización total de V13.2 y agrega herramientas de operación en vivo para cantante, músicos y director del concierto.
+LiveVoz es un teleprompter y sistema de dirección de escenario para conciertos, serenatas, bodas y ensayos. V14.1 perfecciona V14 con una capa de confiabilidad enfocada en uso real durante eventos.
 
 ## Inicio rápido
 
@@ -10,48 +10,92 @@ npm run check
 npm start
 ```
 
-La aplicación de escritorio inicia Stage Network automáticamente. Para diagnóstico también puedes usar:
+La aplicación de escritorio inicia Stage Network automáticamente. Para diagnóstico:
 
 ```bash
 npm run stage-server
 npm run stage-health
 ```
 
+## Qué mejora V14.1
+
+V14.1 conserva todas las funciones de V14 y agrega:
+
+- reconexión progresiva con backoff y jitter;
+- recuperación local del último estado del escenario;
+- petición explícita de resincronización al volver a entrar;
+- reemplazo de conexiones antiguas del mismo dispositivo para evitar duplicados;
+- botón **↻ Sincronizar** para reenviar inmediatamente el estado actual;
+- indicador visible de estado de red en cada dispositivo;
+- modo supervivencia cuando el navegador detecta pérdida de conexión;
+- protección contra conexiones repetidas durante el arranque;
+- deduplicación de mensajes por `messageId`;
+- heartbeat de cliente cada 10 segundos;
+- alerta visual de dispositivos con retraso;
+- alerta de batería ≤20% cuando el navegador entrega ese dato;
+- protocolo Stage Network `14.1`;
+- validación de sintaxis automática mediante `npm run check`;
+- Service Worker/cache separado para V14.1.
+
 ## Flujo de conexión
 
 1. El operador inicia LiveVoz en la laptop.
 2. Genera un QR desde el panel Stage.
 3. El músico escanea el QR, indica nombre e instrumento y entra a **LiveVoz completo**.
-4. Todos los dispositivos permanecen en una sala Stage estable aunque el operador cambie de concierto.
-5. Concierto, canción, línea, tono, BPM y estado del espectáculo siguen al operador.
-6. La transposición, instrumento y preferencias visuales siguen siendo personales por dispositivo.
+4. Todos permanecen dentro de una sala Stage estable aunque el operador cambie de concierto.
+5. Concierto, canción, línea, tono, BPM y estado siguen al operador.
+6. Instrumento, transposición y preferencias visuales siguen siendo personales.
+7. Si un teléfono pierde Wi‑Fi, mantiene el último estado visible e intenta volver automáticamente.
+8. Al reconectar solicita el último estado de la sala y continúa sin generar un QR nuevo.
 
-## Stage Director V14
+## Stage Director
 
-El operador dispone del botón **🎛 V14 Director** dentro de LiveVoz. Incluye:
+El operador dispone de **🎛 V14 Director** con:
 
-- preparación anticipada de la siguiente canción;
-- lanzamiento de la siguiente canción;
+- preparar y lanzar la siguiente canción;
 - cuenta regresiva sincronizada;
 - señales INTRO, CORO, SOLO, CORTE, REPITE, ÚLTIMA y FINAL;
-- vibración de aviso en dispositivos compatibles;
-- bloqueo/desbloqueo del escenario;
-- Wake Lock para evitar que la pantalla se duerma cuando el navegador lo permite;
+- vibración en dispositivos compatibles;
+- bloqueo de escenario y Wake Lock;
 - modos Normal, Serenata, Boda y Ensayo;
-- bloques de evento: Entrada, Cena, Románticas, Baile, Serenata, Cumpleaños y Cierre;
-- notas/partes privadas por instrumento;
-- historial local de operación;
-- estimación de duración del set;
-- Preflight antes del concierto;
-- atajos de teclado y soporte MIDI/Web MIDI cuando el dispositivo/navegador lo permite.
+- bloques Entrada, Cena, Románticas, Baile, Serenata, Cumpleaños y Cierre;
+- partes/notas privadas por instrumento;
+- historial operativo;
+- duración estimada del set;
+- Preflight;
+- atajos de teclado;
+- Web MIDI/pedal cuando el navegador/controlador lo permite.
+
+## Panel del operador
+
+El panel externo de V14.1 muestra:
+
+- protocolo Stage activo;
+- IP y puerto;
+- salas y dispositivos;
+- latencia local;
+- batería/carga cuando está disponible;
+- tipo de red cuando está disponible;
+- dispositivo con retraso (`RETRASO`);
+- batería crítica (`BATERÍA BAJA`);
+- estado general del escenario;
+- botón de resincronización;
+- segunda pantalla de cantante, músico o híbrido.
 
 ## Músicos e instrumentos
 
-LiveVoz conserva los perfiles de V13.1 para cantante, guitarra, bajo, bajo quinto, teclado, acordeón, trompeta Sib, saxofones Sib/Mib, trombón, batería, percusión y modo híbrido.
+Se conservan perfiles para cantante, guitarra, bajo, bajo quinto, teclado, acordeón, trompeta Sib, saxofones Sib/Mib, trombón, batería, percusión y modo híbrido.
 
-Cada dispositivo conserva su transposición personal. Cambiar la transposición de un trompetista no cambia el tono del operador ni de los demás músicos.
+Cada dispositivo conserva su transposición personal. Ejemplo:
 
-Las notas instrumentales permiten guardar instrucciones como:
+```text
+Operador: C
+Guitarra: C
+Trompeta Sib: D
+Sax alto Mib: A
+```
+
+Las notas instrumentales permiten guardar instrucciones privadas como:
 
 ```text
 Guitarra: Capo 2
@@ -60,27 +104,26 @@ Batería: Corte seco al final
 Bajo: No tocar durante la intro
 ```
 
-## Telemetría de dispositivos
+## Recuperación de red
 
-Cuando el navegador proporciona la información, Stage Network puede mostrar:
+Stage Network V14.1 conserva el último `STATE` de cada sala. Al reconectar:
 
-- nombre y rol;
-- instrumento;
-- transposición;
-- batería y estado de carga;
-- tipo de conexión de red;
-- última actividad del dispositivo.
+1. el servidor reemplaza una conexión antigua del mismo `deviceId`;
+2. el dispositivo vuelve a registrarse;
+3. un músico envía `RESYNC_REQUEST`;
+4. el servidor responde con el último estado conocido;
+5. el operador también puede usar **↻ Sincronizar** para forzar una actualización general.
 
-Algunos navegadores no exponen batería o datos detallados de red; LiveVoz funciona aunque esos datos no estén disponibles.
+La pantalla muestra:
 
-## Recuperación y modo offline
+```text
+V14.1 · conectado
+V14.1 · conexión lenta
+V14.1 · sin conexión · modo supervivencia
+V14.1 · red recuperada · reconectando
+```
 
-- Stage Network conserva el último estado de la sala.
-- Los clientes intentan reconectarse automáticamente después de un corte breve.
-- El Service Worker V14 guarda la interfaz principal para recuperación offline cuando el navegador y el contexto de seguridad permiten usar PWA/Service Worker.
-- En una red local HTTP algunos navegadores móviles pueden limitar la instalación PWA. El funcionamiento normal por navegador y Stage Network no depende de que la PWA esté instalada.
-
-## Stage Network V14
+## Stage Network V14.1
 
 Puerto predeterminado: `8080`.
 
@@ -91,13 +134,11 @@ http://IP-DE-LA-PC:8080/health
 http://IP-DE-LA-PC:8080/metrics
 ```
 
-Protocolo actual: `14.0`.
+Protocolo actual: `14.1`.
 
-Además de STATE y COMMAND, V14 soporta mensajes de escenario para precarga, señales, cuenta regresiva, bloqueo, notas privadas, telemetría y modo del evento.
+Los mensajes incluyen STATE, COMMAND, PRELOAD, SIGNAL, COUNTDOWN, LOCK_STAGE, PRIVATE_NOTE, DEVICE_TELEMETRY, STAGE_MODE y RESYNC_REQUEST.
 
-## Atajos V14
-
-En modo operador:
+## Atajos
 
 ```text
 F8   Preparar siguiente canción
@@ -105,8 +146,6 @@ F9   Lanzar siguiente canción
 F10  Señal CORO
 F11  Bloquear/desbloquear escenario
 ```
-
-Con Web MIDI disponible, LiveVoz también puede mapear notas MIDI para anterior, siguiente, coro y final.
 
 ## Preflight recomendado
 
@@ -117,19 +156,34 @@ Antes de un evento:
 3. `npm run check`
 4. `npm start`
 5. Generar un QR nuevo.
-6. Conectar al menos un teléfono.
-7. Abrir **V14 Director** y verificar Preflight.
-8. Probar cambio de concierto, canción y línea.
-9. Probar una señal y la cuenta regresiva.
-10. Desconectar/reconectar un teléfono para comprobar recuperación.
+6. Conectar al menos dos teléfonos si es posible.
+7. Confirmar que el panel indique protocolo `14.1`.
+8. Cambiar concierto, canción y línea.
+9. Probar cuenta regresiva y señales.
+10. Activar/desactivar Wi‑Fi en un teléfono durante unos segundos y comprobar la recuperación.
+11. Pulsar **↻ Sincronizar** y verificar que todos sigan la misma posición.
+12. Probar la pantalla externa si se usará durante el evento.
+
+## Validación
+
+`npm run check` ahora comprueba archivos requeridos, referencias de arranque, credenciales peligrosas, versión del paquete y sintaxis JavaScript/CJS con `node --check`.
+
+Debe terminar con:
+
+```text
+LiveVoz V14.1 check: OK
+```
 
 ## Supabase
 
-El cliente usa solamente la URL pública y una publishable key. Nunca agregues `service_role`, una clave `sb_secret_...` ni la contraseña PostgreSQL al repositorio.
+El cliente usa solamente URL pública y publishable key. Nunca agregues `service_role`, una clave `sb_secret_...` ni la contraseña PostgreSQL al repositorio.
 
-La migración principal está en:
+Migraciones:
 
-`supabase/migrations/20260912022000_livevoz_v11.sql`
+```text
+supabase/migrations/20260912022000_livevoz_v11.sql
+supabase/migrations/20260913093000_livevoz_v14_stage_director.sql
+```
 
 ## Variables opcionales
 
@@ -140,6 +194,12 @@ LIVEVOZ_MAX_CLIENTS_PER_ROOM=40
 LIVEVOZ_MAX_CLIENTS_PER_IP=12
 ```
 
-## Versiones estables
+## Ramas de seguridad
 
-V13.1 y V13.2 permanecen en sus ramas anteriores. V14 se desarrolla en `feature/livevoz-v14-stage-director` para no modificar las versiones ya aprobadas mientras se prueba en eventos reales.
+Las versiones anteriores permanecen separadas. V14.1 se desarrolla en:
+
+```text
+feature/livevoz-v14.1-stage-director-polish
+```
+
+Esto permite probar V14.1 sin modificar V14, V13.2 ni V13.1.
