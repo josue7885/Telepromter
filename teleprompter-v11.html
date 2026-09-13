@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#050505">
-<title>LiveVoz V13 Stage Edition</title>
+<title>LiveVoz V13.2</title>
 <style>
 html,body,#livevoz-app{width:100%;height:100%;margin:0;border:0;background:#050505;overflow:hidden}#boot{position:fixed;inset:0;display:grid;place-items:center;background:#050505;color:#ddd;font:600 14px system-ui;z-index:2}
 </style>
 </head>
 <body>
-<div id="boot">Cargando LiveVoz V13…</div>
+<div id="boot">Cargando LiveVoz V13.2…</div>
 <iframe id="livevoz-app" title="LiveVoz Teleprompter"></iframe>
 <script>
 (() => {
@@ -19,28 +19,12 @@ html,body,#livevoz-app{width:100%;height:100%;margin:0;border:0;background:#0505
   frame.addEventListener('load',()=>{
     try{
       const doc=frame.contentDocument;
-      const loadRuntime=()=>{
-        const runtime=doc.createElement('script');
-        runtime.src='./livevoz-v11-runtime.js';
-        runtime.onload=()=>{
-          const bridge=doc.createElement('script');
-          bridge.src='./livevoz-v13-bridge.js';
-          bridge.onload=()=>document.getElementById('boot')?.remove();
-          bridge.onerror=()=>document.getElementById('boot')?.remove();
-          doc.body.appendChild(bridge);
-        };
-        runtime.onerror=()=>{document.getElementById('boot').textContent='No se pudo iniciar LiveVoz';};
-        doc.body.appendChild(runtime);
-      };
+      const loadScript=(src,onload)=>{const s=doc.createElement('script');s.src=src;s.onload=onload;s.onerror=onload;doc.body.appendChild(s);};
+      const loadRuntime=()=>loadScript('./livevoz-v11-runtime.js',()=>loadScript('./livevoz-v13-bridge.js',()=>loadScript('./livevoz-v13-2-sync.js',()=>document.getElementById('boot')?.remove())));
       const sdk=doc.createElement('script');
       sdk.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-      sdk.onload=loadRuntime;
-      sdk.onerror=loadRuntime;
-      doc.head.appendChild(sdk);
-    }catch(error){
-      console.error(error);
-      document.getElementById('boot').textContent='No se pudo iniciar LiveVoz V13';
-    }
+      sdk.onload=loadRuntime;sdk.onerror=loadRuntime;doc.head.appendChild(sdk);
+    }catch(error){console.error(error);document.getElementById('boot').textContent='No se pudo iniciar LiveVoz V13.2';}
   });
 })();
 </script>
