@@ -5,7 +5,7 @@
   const TOKEN_KEY="livevoz_ws_room_token";
   const SNAPSHOT_KEY="livevoz_v14_1_last_state";
   const seen=new Map();
-  let retry=0,retryTimer=null,heartbeatTimer=null,lastMessageAt=0,manualClose=false;
+  let retry=0,retryTimer=null,heartbeatTimer=null,lastMessageAt=0,lastConnectAt=0,manualClose=false;
 
   const room=()=>String(localStorage.getItem(ROOM_KEY)||currentConcertId||concertName||"livevoz-default").trim();
   const token=()=>String(localStorage.getItem(TOKEN_KEY)||"").trim();
@@ -41,6 +41,9 @@
   function startHeartbeat(){clearInterval(heartbeatTimer);heartbeatTimer=setInterval(()=>{if(ws&&ws.readyState===WebSocket.OPEN)rawSend("PING",profile());},10000);}
 
   connectWebSocket=function(options={}){
+    const t=now();
+    if(options.silent&&ws&&(ws.readyState===WebSocket.OPEN||ws.readyState===WebSocket.CONNECTING)&&t-lastConnectAt<1400)return;
+    lastConnectAt=t;
     const base=(document.getElementById("ws-url-input")?.value||wsBase()).trim();
     const roomToken=(document.getElementById("ws-room-token-input")?.value||token()).trim();
     if(!base){if(!options.silent)showToast?.("Introduce una dirección WebSocket","warning");return;}
@@ -50,18 +53,17 @@
     try{
       const endpoint=new URL(base);endpoint.searchParams.set("room",room());endpoint.searchParams.set("token",roomToken);endpoint.searchParams.set("device",deviceId);endpoint.searchParams.set("role",currentRole);endpoint.searchParams.set("name",deviceName);endpoint.searchParams.set("instrument",instrument());endpoint.searchParams.set("transpose",String(transpose()));endpoint.searchParams.set("v",VERSION);
       const socket=new WebSocket(endpoint.toString());ws=socket;setChip("conectando","warn");updateNetworkUI?.("Conectando…");
-      socket.onopen=()=>{if(ws!==socket)return;retry=0;lastMessageAt=now();networkMode="websocket";setChip("conectado","ok");updateNetworkUI?.();rawSend("DEVICE_JOIN",profile());rawSend("DEVICE_PROFILE",profile());if(currentRole==="operator")setTimeout(()=>broadcastCurrentState?.(true),120);if(!options.silent)showToast?.("📡 Stage Network conectado");};
+      socket.onopen=()=>{if(ws!==socket)return;retry=0;lastMessageAt=now();networkMode="websocket";setChip("conectado","ok");updateNetworkUI?.();rawSend("DEVICE_JOIN",profile());rawSend("DEVICE_PROFILE",profile());if(currentRole==="operator")setTimeout(()=>broadcastCurrentState?.(true),120);else setTimeout(()=>rawSend("RESYNC_REQUEST",{deviceId}),180);if(!options.silent)showToast?.("📡 Stage Network conectado");};
       socket.onmessage=e=>{if(ws!==socket||typeof e.data!=="string"||e.data.length>65536)return;let msg;try{msg=JSON.parse(e.data)}catch(_e){return}lastMessageAt=now();if(msg.messageId&&remember(msg.messageId))return;try{handleNetworkMessage(msg,"websocket")}catch(err){console.error("LiveVoz V14.1 mensaje",err)}};
       socket.onerror=()=>{setChip("problema de red","warn");updateNetworkUI?.("Error de red")};
       socket.onclose=e=>{if(ws===socket)ws=null;if(networkMode==="websocket")networkMode="local";if(e.code===4001){setChip("PIN o sala rechazado","bad");updateNetworkUI?.("PIN/sala rechazado");showToast?.("PIN de Stage Network incorrecto","error");return}scheduleRetry(navigator.onLine===false?"sin Wi‑Fi":"desconectado")};
     }catch(_e){scheduleRetry("error de conexión")}
   };
 
-  const previousClose=typeof closeWebSocket==="function"?closeWebSocket:null;
-  closeWebSocket=function(){manualClose=true;clearRetry();clearInterval(heartbeatTimer);if(ws){try{if(ws.readyState===WebSocket.OPEN)rawSend("DEVICE_LEAVE",{deviceId});ws.onclose=null;ws.close(1000,"client-close")}catch(_e){}ws=null;}retry=0;setChip("desconectado","bad");if(previousClose&&false)previousClose();};
+  closeWebSocket=function(){manualClose=true;clearRetry();clearInterval(heartbeatTimer);if(ws){try{if(ws.readyState===WebSocket.OPEN)rawSend("DEVICE_LEAVE",{deviceId});ws.onclose=null;ws.close(1000,"client-close")}catch(_e){}ws=null;}retry=0;setChip("desconectado","bad");};
 
   function recoverView(){if(currentRole==="operator")return;const state=loadSnapshot();if(!state)return;try{applyRemoteState(state);setChip("último estado recuperado","warn")}catch(_e){}}
-  function networkWatch(){window.addEventListener("online",()=>{setChip("red recuperada · reconectando","warn");if(!ws||ws.readyState!==WebSocket.OPEN){retry=0;connectWebSocket({silent:true})}});window.addEventListener("offline",()=>setChip("sin conexión · modo supervivencia","bad"));}
+  function networkWatch(){window.addEventListener("online",()=>{setChip("red recuperada · reconectando","warn");if(!ws||ws.readyState!==WebSocket.OPEN){retry=0;lastConnectAt=0;connectWebSocket({silent:true})}});window.addEventListener("offline",()=>setChip("sin conexión · modo supervivencia","bad"));}
   function staleWatch(){setInterval(()=>{if(ws&&ws.readyState===WebSocket.OPEN&&lastMessageAt&&now()-lastMessageAt>35000){setChip("conexión lenta","warn")}else if(ws&&ws.readyState===WebSocket.OPEN){setChip("conectado","ok")}},5000);}
 
   function installRecoveryButton(){if(currentRole!=="operator")return;const actions=document.querySelector(".toolbar-actions");if(!actions||document.getElementById("lv141-resync"))return;const b=document.createElement("button");b.id="lv141-resync";b.className="small-btn";b.textContent="↻ Resincronizar";b.title="Envía el estado actual a todos los dispositivos";b.onclick=()=>{broadcastCurrentState?.(true);rawSend("SIGNAL",{label:"SINCRONIZADO",kind:"ok",ms:1200,vibrate:[80]});showToast?.("Estado reenviado a todos los dispositivos")};actions.appendChild(b);}
