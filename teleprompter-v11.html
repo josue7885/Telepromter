@@ -20,7 +20,7 @@ html,body,#livevoz-app{width:100%;height:100%;margin:0;border:0;background:#0505
     try{
       const doc=frame.contentDocument;
       const loadScript=(src,onload)=>{const s=doc.createElement('script');s.src=src;s.onload=onload;s.onerror=onload;doc.body.appendChild(s);};
-      const loadRuntime=()=>loadScript('./livevoz-v11-runtime.js',()=>loadScript('./livevoz-v13-bridge.js',()=>loadScript('./livevoz-v13-2-sync.js',()=>loadScript('./livevoz-v14-runtime.js',()=>document.getElementById('boot')?.remove()))));
+      const loadRuntime=()=>loadScript('./livevoz-v11-runtime.js',()=>loadScript('./livevoz-v13-bridge.js',()=>loadScript('./livevoz-v13-2-sync.js',()=>loadScript('./livevoz-v14-runtime.js',()=>loadScript('./livevoz-v14-cloud.js',()=>document.getElementById('boot')?.remove())))));
       const sdk=doc.createElement('script');
       sdk.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
       sdk.onload=loadRuntime;sdk.onerror=loadRuntime;doc.head.appendChild(sdk);
