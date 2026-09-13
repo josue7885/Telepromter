@@ -13,11 +13,22 @@ const CLIENT_TIMEOUT_MS = 45000;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_CLIENTS_PER_ROOM = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_ROOM || 40);
 const MAX_CLIENTS_PER_IP = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_IP || 12);
-const PROTOCOL_VERSION = "13.1";
+const PROTOCOL_VERSION = "13.2";
 const rooms = new Map();
 const ipCounters = new Map();
 const metrics = {connections:0,messages:0,rejected:0,roomsCreated:0,startTime:Date.now()};
-const mobilePath = path.join(__dirname,"livevoz-mobile-v13-1.html");
+
+const STATIC_FILES = new Map([
+  ["/app", ["teleprompter-v11.html", "text/html; charset=utf-8"]],
+  ["/teleprompter-v11.html", ["teleprompter-v11.html", "text/html; charset=utf-8"]],
+  ["/teleprompter.html", ["teleprompter.html", "text/html; charset=utf-8"]],
+  ["/livevoz-v11-runtime.js", ["livevoz-v11-runtime.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-v13-bridge.js", ["livevoz-v13-bridge.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-v13-2-sync.js", ["livevoz-v13-2-sync.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-logo.png", ["livevoz-logo.png", "image/png"]],
+  ["/manifest.webmanifest", ["manifest.webmanifest", "application/manifest+json; charset=utf-8"]],
+  ["/sw.js", ["sw.js", "text/javascript; charset=utf-8"]]
+]);
 
 function safeText(value,max=120){return typeof value==="string"?value.slice(0,max):"";}
 function safeTranspose(value){return Math.max(-12,Math.min(12,Math.round(Number(value)||0)));}
@@ -33,9 +44,10 @@ function relay(room,sender,message){const encoded=JSON.stringify(message);if(Buf
 function closeWith(ws,code,reason){metrics.rejected++;try{ws.close(code,reason);}catch(_e){}}
 function applyProfile(ws,payload={}){if(typeof payload.name==="string")ws.livevozName=safeText(payload.name,60);if(typeof payload.instrument==="string")ws.livevozInstrument=safeText(payload.instrument,40);if(payload.transpose!==undefined)ws.livevozTranspose=safeTranspose(payload.transpose);if(typeof payload.role==="string")ws.livevozRole=safeText(payload.role,24);}
 function roomSummary(){return [...rooms.entries()].map(([id,r])=>({id,clients:r.clients.size,ageSeconds:Math.round((now()-r.createdAt)/1000),idleSeconds:Math.round((now()-r.updatedAt)/1000),hasState:!!r.lastState,devices:[...r.clients].map(ws=>({device:ws.livevozDevice,name:ws.livevozName||"",role:ws.livevozRole,instrument:ws.livevozInstrument||"",transpose:safeTranspose(ws.livevozTranspose),lastSeen:ws.lastSeen,connected:true}))}));}
+function serveStatic(res,route,headers){const item=STATIC_FILES.get(route);if(!item)return false;const [file,type]=item;try{const data=fs.readFileSync(path.join(__dirname,file));res.writeHead(200,{...headers,"content-type":type});res.end(data);return true;}catch(_e){res.writeHead(404,{...headers,"content-type":"text/plain; charset=utf-8"});res.end("Archivo LiveVoz no disponible");return true;}}
 
 const server=http.createServer((req,res)=>{
-  const headers={"cache-control":"no-store","access-control-allow-origin":"*"};
+  const headers={"cache-control":"no-store","access-control-allow-origin":"*","x-content-type-options":"nosniff"};
   const url=new URL(req.url||"/",`http://${req.headers.host||"localhost"}`);
   if(url.pathname==="/health"){
     res.writeHead(200,{...headers,"content-type":"application/json"});
@@ -47,16 +59,17 @@ const server=http.createServer((req,res)=>{
   }
   if(url.pathname==="/join"){
     try{
-      const html=fs.readFileSync(mobilePath,"utf8");
-      res.writeHead(200,{...headers,"content-type":"text/html; charset=utf-8","content-security-policy":"default-src 'self' 'unsafe-inline' data:; connect-src ws: wss: http: https:;"});
+      const html=fs.readFileSync(path.join(__dirname,"livevoz-mobile-v13-2.html"),"utf8");
+      res.writeHead(200,{...headers,"content-type":"text/html; charset=utf-8","content-security-policy":"default-src 'self' 'unsafe-inline' data:; connect-src ws: wss: http: https:; img-src 'self' data:;"});
       return res.end(html);
     }catch(_e){
       res.writeHead(500,{...headers,"content-type":"text/plain; charset=utf-8"});
       return res.end("LiveVoz Mobile no está disponible. Ejecuta npm run check.");
     }
   }
+  if(serveStatic(res,url.pathname,headers))return;
   res.writeHead(200,{...headers,"content-type":"text/plain; charset=utf-8"});
-  res.end(`LiveVoz Stage Network v${PROTOCOL_VERSION}\nHealth: /health\nMetrics: /metrics\nJoin: /join\n`);
+  res.end(`LiveVoz Stage Network v${PROTOCOL_VERSION}\nApp: /app\nJoin: /join\nHealth: /health\nMetrics: /metrics\n`);
 });
 
 const wss=new WebSocketServer({server,maxPayload:MAX_MESSAGE_BYTES,perMessageDeflate:false,clientTracking:true});
@@ -107,7 +120,6 @@ wss.on("connection",(ws,req)=>{
 });
 
 const heartbeat=setInterval(()=>{const t=now();for(const [roomId,room]of rooms){for(const ws of room.clients){if(!ws.isAlive||t-ws.lastSeen>CLIENT_TIMEOUT_MS){try{ws.terminate();}catch(_e){}continue;}ws.isAlive=false;try{ws.ping();}catch(_e){}}if(room.clients.size===0&&t-room.updatedAt>ROOM_TTL_MS)rooms.delete(roomId);}},HEARTBEAT_MS);heartbeat.unref();
-
 server.on("error",error=>{if(error?.code==="EADDRINUSE")console.error(`LiveVoz Stage Network: el puerto ${PORT} ya está en uso.`);else console.error("LiveVoz Stage Network:",error);});
 server.listen(PORT,HOST,()=>console.log(`LiveVoz Stage Network v${PROTOCOL_VERSION} escuchando en ws://${HOST}:${PORT}`));
 process.on("SIGINT",()=>{clearInterval(heartbeat);wss.close(()=>server.close(()=>process.exit(0)));});
