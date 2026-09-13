@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<title>LiveVoz V13.2 · Conectar</title>
+<style>
+:root{color-scheme:dark;--bg:#050505;--panel:#111;--line:#303030;--muted:#8b8b8b;--ok:#2ecc71;--yellow:#f1c40f;--blue:#3498db}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#171717,#050505 56%);color:#fff;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;display:grid;place-items:center;padding:18px}.card{width:min(94vw,620px);background:linear-gradient(145deg,#171717,#0e0e0e);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 25px 80px #0009}.brand{display:flex;align-items:center;gap:12px;margin-bottom:12px}.logo{width:54px;height:54px;border-radius:12px;object-fit:cover;background:#fff}.title{font-size:1.7rem;font-weight:900}.sub{font-size:.78rem;color:var(--muted);margin-top:3px}.ok{color:var(--ok);font-weight:800}.meta{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0}.box{background:#090909;border:1px solid #292929;border-radius:11px;padding:11px}.box small{display:block;color:#777;font-size:.65rem;text-transform:uppercase}.box b{display:block;margin-top:4px;word-break:break-word}label{display:block;margin:13px 0 6px;color:#aaa;font-size:.78rem}input,select{width:100%;background:#151515;border:1px solid #333;border-radius:9px;padding:12px;color:#fff;font:inherit}button{width:100%;margin-top:17px;background:var(--yellow);color:#000;border:0;border-radius:11px;padding:14px;font-weight:900;font-size:1rem}.note{margin-top:13px;color:#777;font-size:.75rem;line-height:1.45;text-align:center}.status{margin-top:12px;border:1px solid #2a2a2a;background:#0b0b0b;border-radius:10px;padding:10px;color:#aaa;font-size:.78rem}@media(max-width:520px){.meta{grid-template-columns:1fr}.card{padding:18px}}
+</style>
+</head>
+<body>
+<section class="card">
+  <div class="brand"><img class="logo" src="/livevoz-logo.png" alt="LiveVoz"><div><div class="title">LiveVoz</div><div class="sub">V13.2 · conexión completa al escenario</div></div></div>
+  <p class="ok">✓ Invitación válida. Al entrar se abrirá la interfaz original de LiveVoz.</p>
+  <div class="meta"><div class="box"><small>Sala Stage</small><b id="roomText">—</b></div><div class="box"><small>PIN</small><b id="pinText">—</b></div></div>
+  <label for="name">Tu nombre</label><input id="name" maxlength="60" placeholder="Ej. Carlos">
+  <label for="instrument">Instrumento / función</label>
+  <select id="instrument">
+    <option value="singer">🎤 Cantante</option><option value="guitar">🎸 Guitarra</option><option value="bass">🎸 Bajo</option><option value="bajo_quinto">🪕 Bajo quinto</option><option value="keyboard">🎹 Teclado</option><option value="accordion">🪗 Acordeón</option><option value="trumpet_bb">🎺 Trompeta en Sib</option><option value="tenor_sax_bb">🎷 Saxofón tenor en Sib</option><option value="alto_sax_eb">🎷 Saxofón alto en Mib</option><option value="baritone_sax_eb">🎷 Saxofón barítono en Mib</option><option value="trombone">🎺 Trombón</option><option value="drums">🥁 Batería</option><option value="percussion">🪘 Percusión</option><option value="hybrid">🎼 Letra + acordes</option>
+  </select>
+  <div class="status" id="profileInfo">Selecciona tu instrumento. LiveVoz conservará tu transposición personal.</div>
+  <button id="enterBtn">Entrar a LiveVoz completo</button>
+  <div class="note">Desde este momento, los cambios del operador en concierto, canción, línea, tono y BPM se sincronizarán con los dispositivos conectados.</div>
+</section>
+<script>
+(()=>{
+ const q=new URLSearchParams(location.search),room=q.get('room')||'livevoz-stage',token=q.get('token')||'', $=id=>document.getElementById(id);
+ const P={singer:{label:'Cantante',role:'singer',t:0},guitar:{label:'Guitarra',role:'musician',t:0},bass:{label:'Bajo',role:'musician',t:0},bajo_quinto:{label:'Bajo quinto',role:'musician',t:0},keyboard:{label:'Teclado',role:'musician',t:0},accordion:{label:'Acordeón',role:'musician',t:0},trumpet_bb:{label:'Trompeta en Sib',role:'musician',t:2},tenor_sax_bb:{label:'Saxofón tenor en Sib',role:'musician',t:2},alto_sax_eb:{label:'Saxofón alto en Mib',role:'musician',t:9},baritone_sax_eb:{label:'Saxofón barítono en Mib',role:'musician',t:9},trombone:{label:'Trombón',role:'musician',t:0},drums:{label:'Batería',role:'musician',t:0},percussion:{label:'Percusión',role:'musician',t:0},hybrid:{label:'Letra + acordes',role:'hybrid',t:0}};
+ $('roomText').textContent=room;$('pinText').textContent=token||'Sin PIN';$('name').value=localStorage.getItem('livevoz_mobile_name')||'';$('instrument').value=localStorage.getItem('livevoz_mobile_instrument')||'guitar';
+ function refresh(){const p=P[$('instrument').value]||P.guitar;$('profileInfo').textContent=p.t?`${p.label}: transposición personal recomendada ${p.t>0?'+':''}${p.t} semitonos.`:`${p.label}: tono de concierto.`}
+ $('instrument').onchange=refresh;refresh();
+ $('enterBtn').onclick=()=>{const name=$('name').value.trim(),instrument=$('instrument').value,p=P[instrument]||P.guitar;if(!name){$('profileInfo').textContent='Escribe tu nombre para entrar.';return;}const previous=localStorage.getItem('livevoz_mobile_instrument');let transpose=Number(localStorage.getItem('livevoz_mobile_transpose'));if(previous!==instrument||!Number.isFinite(transpose))transpose=p.t;localStorage.setItem('livevoz_mobile_name',name);localStorage.setItem('livevoz_mobile_instrument',instrument);localStorage.setItem('livevoz_mobile_transpose',String(transpose));const u=new URL('/app',location.origin);u.searchParams.set('stageRoom',room);u.searchParams.set('token',token);u.searchParams.set('role',p.role);u.searchParams.set('name',name);u.searchParams.set('instrument',instrument);u.searchParams.set('transpose',String(transpose));location.href=u.toString();};
+})();
+</script>
+</body>
+</html>
