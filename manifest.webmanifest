@@ -1,7 +1,7 @@
 {
-  "name": "LiveVoz V14.1 Stage Director",
+  "name": "LiveVoz V14.2",
   "short_name": "LiveVoz",
-  "description": "Teleprompter y director de escenario para conciertos, serenatas, bodas y ensayos con sincronización robusta, recuperación de estado y operación offline.",
+  "description": "Teleprompter y plataforma para conciertos con sincronización confirmada, editor profesional, biblioteca, setlists, perfiles, ensayo, historial, respaldo y operación offline.",
   "lang": "es-SV",
   "start_url": "./app",
   "scope": "./",
