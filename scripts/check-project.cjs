@@ -19,7 +19,8 @@ const required = [
   "manifest.webmanifest",
   "sw.js",
   "livevoz-logo.png",
-  "supabase/migrations/20260912022000_livevoz_v11.sql"
+  "supabase/migrations/20260912022000_livevoz_v11.sql",
+  "supabase/migrations/20260913093000_livevoz_v14_stage_director.sql"
 ];
 
 let failed = false;
@@ -43,8 +44,13 @@ for (const ref of ["./teleprompter.html", "./livevoz-v11-runtime.js", "./livevoz
 }
 
 const stagePanel = fs.readFileSync(path.join(root, "livevoz-v13-stage.html"), "utf8");
-for (const text of ["V14", "Modo concierto", "Generar QR", "Preflight", "Músicos y dispositivos", "battery"]) {
+for (const text of ["V14", "Modo concierto", "Generar QR", "Preflight", "Músicos y dispositivos", "battery", "Pantalla externa", "openStageDisplay"]) {
   if (!stagePanel.includes(text)) { console.error(`✗ Panel Stage no incluye: ${text}`); failed = true; }
+}
+
+const preload = fs.readFileSync(path.join(root, "livevoz-v13-preload.cjs"), "utf8");
+for (const text of ["openStageDisplay", "closeStageDisplay", "livevoz:open-stage-display"]) {
+  if (!preload.includes(text)) { console.error(`✗ Preload no incluye: ${text}`); failed = true; }
 }
 
 const bridge = fs.readFileSync(path.join(root, "livevoz-v13-bridge.js"), "utf8");
@@ -63,7 +69,7 @@ for (const text of ["Stage Director", "PRELOAD", "COUNTDOWN", "LOCK_STAGE", "PRI
 }
 
 const electronMain = fs.readFileSync(path.join(root, "electron-main.cjs"), "utf8");
-for (const ref of ["livevoz-v13-stage.html", "livevoz-v13-preload.cjs", "livevoz:start-stage", "QRCode.toDataURL"]) {
+for (const ref of ["livevoz-v13-stage.html", "livevoz-v13-preload.cjs", "livevoz:start-stage", "QRCode.toDataURL", "openStageDisplay", "screen.getAllDisplays", "midiSysex"]) {
   if (!electronMain.includes(ref)) { console.error(`✗ electron-main.cjs no integra ${ref}`); failed = true; }
 }
 
@@ -82,6 +88,11 @@ const manifest = fs.readFileSync(path.join(root, "manifest.webmanifest"), "utf8"
 if (!manifest.includes("LiveVoz V14 Stage Director") || !manifest.includes('"./app"')) { console.error("✗ Manifest no apunta a V14 /app"); failed = true; }
 const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 if (!sw.includes("livevoz-teleprompter-v14") || !sw.includes("livevoz-v14-runtime.js")) { console.error("✗ Service Worker no cachea V14"); failed = true; }
+
+const migration = fs.readFileSync(path.join(root, "supabase/migrations/20260913093000_livevoz_v14_stage_director.sql"), "utf8");
+for (const text of ["device_profiles", "song_instrument_parts", "event_runs", "admin", "operator"]) {
+  if (!migration.includes(text)) { console.error(`✗ Migración V14 no incluye: ${text}`); failed = true; }
+}
 
 const runtime = fs.readFileSync(path.join(root, "livevoz-v11-runtime.js"), "utf8");
 if (!runtime.includes("sb_publishable_")) console.warn("! No se encontró una publishable key de Supabase en el runtime");
