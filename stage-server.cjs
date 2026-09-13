@@ -26,6 +26,7 @@ const STATIC_FILES = new Map([
   ["/livevoz-v13-bridge.js", ["livevoz-v13-bridge.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v13-2-sync.js", ["livevoz-v13-2-sync.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-runtime.js", ["livevoz-v14-runtime.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-v14-cloud.js", ["livevoz-v14-cloud.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-logo.png", ["livevoz-logo.png", "image/png"]],
   ["/manifest.webmanifest", ["manifest.webmanifest", "application/manifest+json; charset=utf-8"]],
   ["/sw.js", ["sw.js", "text/javascript; charset=utf-8"]]
