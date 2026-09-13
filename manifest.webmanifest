@@ -1,9 +1,9 @@
 {
-  "name": "LiveVoz Teleprompter",
+  "name": "LiveVoz V14 Stage Director",
   "short_name": "LiveVoz",
-  "description": "Teleprompter profesional para conciertos con Supabase Cloud y Stage Network.",
+  "description": "Teleprompter y director de escenario para conciertos, serenatas, bodas y ensayos con sincronización total entre dispositivos.",
   "lang": "es-SV",
-  "start_url": "./teleprompter-v11.html?role=operator",
+  "start_url": "./app",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "any",
