@@ -13,10 +13,10 @@ const CLIENT_TIMEOUT_MS = 45000;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_CLIENTS_PER_ROOM = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_ROOM || 40);
 const MAX_CLIENTS_PER_IP = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_IP || 12);
-const PROTOCOL_VERSION = "14.1";
+const PROTOCOL_VERSION = "14.2";
 const rooms = new Map();
 const ipCounters = new Map();
-const metrics = {connections:0,messages:0,rejected:0,roomsCreated:0,reconnectReplacements:0,resyncRequests:0,startTime:Date.now()};
+const metrics = {connections:0,messages:0,rejected:0,roomsCreated:0,reconnectReplacements:0,resyncRequests:0,stateAcks:0,startTime:Date.now()};
 
 const STATIC_FILES = new Map([
   ["/app", ["teleprompter-v11.html", "text/html; charset=utf-8"]],
@@ -28,6 +28,7 @@ const STATIC_FILES = new Map([
   ["/livevoz-v14-runtime.js", ["livevoz-v14-runtime.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-cloud.js", ["livevoz-v14-cloud.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-1-polish.js", ["livevoz-v14-1-polish.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-v14-2-workspace.js", ["livevoz-v14-2-workspace.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-logo.png", ["livevoz-logo.png", "image/png"]],
   ["/manifest.webmanifest", ["manifest.webmanifest", "application/manifest+json; charset=utf-8"]],
   ["/sw.js", ["sw.js", "text/javascript; charset=utf-8"]]
@@ -48,7 +49,7 @@ function relay(room,sender,message){const encoded=JSON.stringify(message);if(Buf
 function closeWith(ws,code,reason){metrics.rejected++;try{ws.close(code,reason);}catch(_e){}}
 function applyProfile(ws,payload={}){if(typeof payload.name==="string")ws.livevozName=safeText(payload.name,60);if(typeof payload.instrument==="string")ws.livevozInstrument=safeText(payload.instrument,40);if(payload.transpose!==undefined)ws.livevozTranspose=safeTranspose(payload.transpose);if(typeof payload.role==="string")ws.livevozRole=safeText(payload.role,24);}
 function applyTelemetry(ws,payload={}){applyProfile(ws,payload);ws.livevozBattery=safePercent(payload.battery);ws.livevozCharging=typeof payload.charging==="boolean"?payload.charging:null;ws.livevozNetwork=safeText(payload.network,24);const d=Number(payload.downlink);ws.livevozDownlink=Number.isFinite(d)?Math.max(0,Math.min(1000,d)):null;}
-function roomSummary(){return [...rooms.entries()].map(([id,r])=>({id,clients:r.clients.size,ageSeconds:Math.round((now()-r.createdAt)/1000),idleSeconds:Math.round((now()-r.updatedAt)/1000),hasState:!!r.lastState,devices:[...r.clients].map(ws=>({device:ws.livevozDevice,name:ws.livevozName||"",role:ws.livevozRole,instrument:ws.livevozInstrument||"",transpose:safeTranspose(ws.livevozTranspose),battery:ws.livevozBattery??null,charging:ws.livevozCharging??null,network:ws.livevozNetwork||"",downlink:ws.livevozDownlink??null,lastSeen:ws.lastSeen,connected:true}))}));}
+function roomSummary(){return [...rooms.entries()].map(([id,r])=>({id,clients:r.clients.size,ageSeconds:Math.round((now()-r.createdAt)/1000),idleSeconds:Math.round((now()-r.updatedAt)/1000),hasState:!!r.lastState,lastRevision:Number(r.lastState?.payload?.stateRevision)||0,devices:[...r.clients].map(ws=>({device:ws.livevozDevice,name:ws.livevozName||"",role:ws.livevozRole,instrument:ws.livevozInstrument||"",transpose:safeTranspose(ws.livevozTranspose),battery:ws.livevozBattery??null,charging:ws.livevozCharging??null,network:ws.livevozNetwork||"",downlink:ws.livevozDownlink??null,lastAckRevision:Number(ws.livevozLastAckRevision)||0,lastAckAt:Number(ws.livevozLastAckAt)||0,lastSeen:ws.lastSeen,connected:true}))}));}
 function serveStatic(res,route,headers){const item=STATIC_FILES.get(route);if(!item)return false;const [file,type]=item;try{const data=fs.readFileSync(path.join(__dirname,file));res.writeHead(200,{...headers,"content-type":type});res.end(data);return true;}catch(_e){res.writeHead(404,{...headers,"content-type":"text/plain; charset=utf-8"});res.end("Archivo LiveVoz no disponible");return true;}}
 
 const server=http.createServer((req,res)=>{
@@ -103,7 +104,7 @@ wss.on("connection",(ws,req)=>{
   }
   if(room.clients.size>=MAX_CLIENTS_PER_ROOM)return closeWith(ws,4002,"room-full");
 
-  ws.livevozRoom=roomId;ws.livevozDevice=device;ws.livevozRole=role;ws.livevozName=name;ws.livevozInstrument=instrument;ws.livevozTranspose=transpose;ws.livevozIp=ip;ws.isAlive=true;ws.lastSeen=now();ws.livevozLeft=false;
+  ws.livevozRoom=roomId;ws.livevozDevice=device;ws.livevozRole=role;ws.livevozName=name;ws.livevozInstrument=instrument;ws.livevozTranspose=transpose;ws.livevozIp=ip;ws.isAlive=true;ws.lastSeen=now();ws.livevozLeft=false;ws.livevozLastAckRevision=0;ws.livevozLastAckAt=0;
   room.clients.add(ws);room.updatedAt=now();incIp(ip);metrics.connections++;
 
   send(ws,{type:"WELCOME",payload:{protocol:PROTOCOL_VERSION,roomId,serverTime:now(),compatible:!protocol||protocol.startsWith("14")||protocol.startsWith("13")||protocol.startsWith("12")||protocol.startsWith("11")},timestamp:now(),messageId:`server:${crypto.randomUUID()}`,senderId:"server",senderRole:"server",roomId});
@@ -117,13 +118,19 @@ wss.on("connection",(ws,req)=>{
     if(!msg||typeof msg!=="object")return;
     if(msg.roomId!==roomId)return;
     if(msg.senderId!==device||msg.senderRole!==ws.livevozRole)return;
-    const allowed=new Set(["STATE","COMMAND","PING","PONG","DEVICE_JOIN","DEVICE_LEAVE","DEVICE_PROFILE","SIGNAL","COUNTDOWN","PRELOAD","LOCK_STAGE","PRIVATE_NOTE","DEVICE_TELEMETRY","STAGE_MODE","RESYNC_REQUEST"]);
+    const allowed=new Set(["STATE","STATE_ACK","COMMAND","PING","PONG","DEVICE_JOIN","DEVICE_LEAVE","DEVICE_PROFILE","SIGNAL","COUNTDOWN","PRELOAD","LOCK_STAGE","PRIVATE_NOTE","DEVICE_TELEMETRY","STAGE_MODE","RESYNC_REQUEST"]);
     if(!allowed.has(msg.type))return;
     const operatorOnly=new Set(["STATE","COMMAND","SIGNAL","COUNTDOWN","PRELOAD","LOCK_STAGE","PRIVATE_NOTE","STAGE_MODE"]);
     if(operatorOnly.has(msg.type)&&ws.livevozRole!=="operator")return;
     if(["DEVICE_JOIN","DEVICE_PROFILE","PING","PONG"].includes(msg.type))applyProfile(ws,msg.payload||{});
     if(msg.type==="DEVICE_TELEMETRY")applyTelemetry(ws,msg.payload||{});
     if(msg.type==="STATE"&&ws.livevozRole==="operator")room.lastState=msg;
+    if(msg.type==="STATE_ACK"){
+      metrics.stateAcks++;
+      ws.livevozLastAckRevision=Math.max(0,Number(msg.payload?.revision)||0);
+      ws.livevozLastAckAt=now();
+      return;
+    }
     if(msg.type==="RESYNC_REQUEST"){
       metrics.resyncRequests++;
       if(room.lastState)send(ws,room.lastState);
