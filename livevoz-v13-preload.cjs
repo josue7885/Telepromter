@@ -7,5 +7,7 @@ contextBridge.exposeInMainWorld("livevozDesktop", {
   stopStage: () => ipcRenderer.invoke("livevoz:stop-stage"),
   preflight: () => ipcRenderer.invoke("livevoz:preflight"),
   createInvite: (payload) => ipcRenderer.invoke("livevoz:create-invite", payload || {}),
-  setConcertMode: (enabled) => ipcRenderer.invoke("livevoz:concert-mode", Boolean(enabled))
+  setConcertMode: (enabled) => ipcRenderer.invoke("livevoz:concert-mode", Boolean(enabled)),
+  openStageDisplay: (role) => ipcRenderer.invoke("livevoz:open-stage-display", String(role || "singer")),
+  closeStageDisplay: () => ipcRenderer.invoke("livevoz:close-stage-display")
 });
