@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#050505">
-<title>LiveVoz V14.1 · Conectar</title>
+<title>LiveVoz V14.2 · Conectar</title>
 <style>
 :root{color-scheme:dark;--bg:#050505;--panel:#111;--line:#303030;--muted:#8b8b8b;--ok:#2ecc71;--warn:#f1c40f;--bad:#ff6677}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#171717,#050505 56%);color:#fff;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;display:grid;place-items:center;padding:18px}.card{width:min(94vw,620px);background:linear-gradient(145deg,#171717,#0e0e0e);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 25px 80px #0009}.brand{display:flex;align-items:center;gap:12px;margin-bottom:12px}.logo{width:54px;height:54px;border-radius:12px;object-fit:cover;background:#fff}.title{font-size:1.7rem;font-weight:900}.sub{font-size:.78rem;color:var(--muted);margin-top:3px}.ok{color:var(--ok);font-weight:800}.meta{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0}.box{background:#090909;border:1px solid #292929;border-radius:11px;padding:11px}.box small{display:block;color:#777;font-size:.65rem;text-transform:uppercase}.box b{display:block;margin-top:4px;word-break:break-word}label{display:block;margin:13px 0 6px;color:#aaa;font-size:.78rem}input,select{width:100%;background:#151515;border:1px solid #333;border-radius:9px;padding:12px;color:#fff;font:inherit}button{width:100%;margin-top:17px;background:var(--warn);color:#000;border:0;border-radius:11px;padding:14px;font-weight:900;font-size:1rem;cursor:pointer}.note{margin-top:13px;color:#777;font-size:.75rem;line-height:1.45;text-align:center}.status{margin-top:12px;border:1px solid #2a2a2a;background:#0b0b0b;border-radius:10px;padding:10px;color:#aaa;font-size:.78rem}.status.ok{border-color:#28573f;color:#9ce6be}.status.warn{border-color:#6a5721;color:#ffe08a}.status.bad{border-color:#73303b;color:#ff9eaa}@media(max-width:520px){.meta{grid-template-columns:1fr}.card{padding:18px}}
 </style>
 </head>
 <body>
 <section class="card">
-  <div class="brand"><img class="logo" src="/livevoz-logo.png" alt="LiveVoz"><div><div class="title">LiveVoz</div><div class="sub">V14.1 · conexión segura al escenario</div></div></div>
-  <p class="ok">✓ Invitación válida. Al entrar se abrirá LiveVoz completo.</p>
+  <div class="brand"><img class="logo" src="/livevoz-logo.png" alt="LiveVoz"><div><div class="title">LiveVoz</div><div class="sub">V14.2 · conexión al escenario</div></div></div>
+  <p class="ok">✓ Invitación válida. Entrarás a LiveVoz completo con tus preferencias.</p>
   <div class="meta"><div class="box"><small>Sala Stage</small><b id="roomText">—</b></div><div class="box"><small>PIN</small><b id="pinText">—</b></div></div>
   <div class="status warn" id="networkStatus">Comprobando Stage Network…</div>
   <label for="name">Tu nombre</label><input id="name" maxlength="60" placeholder="Ej. Carlos" autocomplete="name">
@@ -22,7 +22,7 @@
   </select>
   <div class="status" id="profileInfo">Selecciona tu instrumento. LiveVoz conservará tu transposición personal.</div>
   <button id="enterBtn">Entrar a LiveVoz completo</button>
-  <div class="note">LiveVoz recordará tu nombre, instrumento y transposición. Si el Wi‑Fi se corta durante el evento, V14.1 conservará el último estado e intentará volver a la sala automáticamente.</div>
+  <div class="note">V14.2 conserva nombre, instrumento, transposición, notas personales y último estado visible. Si el Wi‑Fi se corta, intentará recuperar la sala y sincronizar el estado actual automáticamente.</div>
 </section>
 <script>
 (()=>{
