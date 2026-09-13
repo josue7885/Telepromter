@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "13.1.0",
-  "description": "LiveVoz V13.1 con perfiles de músicos, instrumentos y transposición personal por dispositivo",
+  "version": "13.2.0",
+  "description": "LiveVoz V13.2 con interfaz móvil completa y sincronización total de concierto entre dispositivos",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
@@ -42,7 +42,9 @@
       "livevoz-v13-stage.html",
       "livevoz-v13-preload.cjs",
       "livevoz-v13-bridge.js",
+      "livevoz-v13-2-sync.js",
       "livevoz-mobile-v13-1.html",
+      "livevoz-mobile-v13-2.html",
       "livevoz-logo.png",
       "manifest.webmanifest",
       "sw.js",
