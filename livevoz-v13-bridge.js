@@ -1,8 +1,11 @@
 (() => {
   "use strict";
+  const SESSION_ROOM_KEY = "livevoz_stage_session_room";
 
   function currentRoom(){
     try {
+      const stable = String(localStorage.getItem(SESSION_ROOM_KEY) || "").trim();
+      if(stable) return stable;
       const id = typeof currentConcertId !== "undefined" ? currentConcertId : "";
       const name = typeof concertName !== "undefined" ? concertName : "";
       return String(id || name || "livevoz-default").trim();
@@ -41,11 +44,13 @@
 
     if (message.type !== "LIVEVOZ_V13_SET_STAGE_CONFIG") return;
 
+    const room = String(message.room || currentRoom() || "livevoz-default").trim().slice(0, 128);
     const token = String(message.token || "").trim().slice(0, 64);
     const wsUrl = String(message.wsUrl || "").trim();
 
     try {
       if (typeof closeWebSocket === "function") closeWebSocket();
+      localStorage.setItem(SESSION_ROOM_KEY, room);
       localStorage.setItem("livevoz_ws_room_token", token);
       if (typeof STORAGE_KEYS !== "undefined" && STORAGE_KEYS.wsUrl && wsUrl) {
         localStorage.setItem(STORAGE_KEYS.wsUrl, wsUrl);
@@ -58,8 +63,8 @@
         try {
           if (typeof connectWebSocket === "function" && wsUrl) connectWebSocket({ silent: true });
         } catch (_e) {}
-      }, 250);
-      reply("LIVEVOZ_V13_STAGE_CONFIGURED", { room: currentRoom(), token, wsUrl });
+      }, 300);
+      reply("LIVEVOZ_V13_STAGE_CONFIGURED", { room, token, wsUrl });
     } catch (error) {
       reply("LIVEVOZ_V13_STAGE_CONFIG_ERROR", { message: String(error?.message || error) });
     }
