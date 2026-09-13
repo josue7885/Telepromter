@@ -1,72 +1,137 @@
-# LiveVoz Teleprompter V12
+# LiveVoz V14 — Stage Director
 
-LiveVoz combina teleprompter para cantante, músico, modo híbrido y operador con Supabase Cloud, Stage Network y soporte offline para conciertos.
+LiveVoz es un teleprompter y sistema de dirección de escenario para conciertos, serenatas, bodas y ensayos. V14 mantiene la sincronización total de V13.2 y agrega herramientas de operación en vivo para cantante, músicos y director del concierto.
 
 ## Inicio rápido
 
 ```bash
 npm install
 npm run check
-npm run stage-server
-npm run stage-health
 npm start
 ```
 
-`npm run check` valida que los archivos críticos existan, que las referencias de arranque estén completas y que no haya secretos de Supabase expuestos en el runtime.
+La aplicación de escritorio inicia Stage Network automáticamente. Para diagnóstico también puedes usar:
 
-`npm run stage-health` comprueba que Stage Network esté respondiendo antes de un evento.
+```bash
+npm run stage-server
+npm run stage-health
+```
+
+## Flujo de conexión
+
+1. El operador inicia LiveVoz en la laptop.
+2. Genera un QR desde el panel Stage.
+3. El músico escanea el QR, indica nombre e instrumento y entra a **LiveVoz completo**.
+4. Todos los dispositivos permanecen en una sala Stage estable aunque el operador cambie de concierto.
+5. Concierto, canción, línea, tono, BPM y estado del espectáculo siguen al operador.
+6. La transposición, instrumento y preferencias visuales siguen siendo personales por dispositivo.
+
+## Stage Director V14
+
+El operador dispone del botón **🎛 V14 Director** dentro de LiveVoz. Incluye:
+
+- preparación anticipada de la siguiente canción;
+- lanzamiento de la siguiente canción;
+- cuenta regresiva sincronizada;
+- señales INTRO, CORO, SOLO, CORTE, REPITE, ÚLTIMA y FINAL;
+- vibración de aviso en dispositivos compatibles;
+- bloqueo/desbloqueo del escenario;
+- Wake Lock para evitar que la pantalla se duerma cuando el navegador lo permite;
+- modos Normal, Serenata, Boda y Ensayo;
+- bloques de evento: Entrada, Cena, Románticas, Baile, Serenata, Cumpleaños y Cierre;
+- notas/partes privadas por instrumento;
+- historial local de operación;
+- estimación de duración del set;
+- Preflight antes del concierto;
+- atajos de teclado y soporte MIDI/Web MIDI cuando el dispositivo/navegador lo permite.
+
+## Músicos e instrumentos
+
+LiveVoz conserva los perfiles de V13.1 para cantante, guitarra, bajo, bajo quinto, teclado, acordeón, trompeta Sib, saxofones Sib/Mib, trombón, batería, percusión y modo híbrido.
+
+Cada dispositivo conserva su transposición personal. Cambiar la transposición de un trompetista no cambia el tono del operador ni de los demás músicos.
+
+Las notas instrumentales permiten guardar instrucciones como:
+
+```text
+Guitarra: Capo 2
+Trompeta Sib: Entrar después del segundo coro
+Batería: Corte seco al final
+Bajo: No tocar durante la intro
+```
+
+## Telemetría de dispositivos
+
+Cuando el navegador proporciona la información, Stage Network puede mostrar:
+
+- nombre y rol;
+- instrumento;
+- transposición;
+- batería y estado de carga;
+- tipo de conexión de red;
+- última actividad del dispositivo.
+
+Algunos navegadores no exponen batería o datos detallados de red; LiveVoz funciona aunque esos datos no estén disponibles.
+
+## Recuperación y modo offline
+
+- Stage Network conserva el último estado de la sala.
+- Los clientes intentan reconectarse automáticamente después de un corte breve.
+- El Service Worker V14 guarda la interfaz principal para recuperación offline cuando el navegador y el contexto de seguridad permiten usar PWA/Service Worker.
+- En una red local HTTP algunos navegadores móviles pueden limitar la instalación PWA. El funcionamiento normal por navegador y Stage Network no depende de que la PWA esté instalada.
+
+## Stage Network V14
+
+Puerto predeterminado: `8080`.
+
+```text
+http://IP-DE-LA-PC:8080/join
+http://IP-DE-LA-PC:8080/app
+http://IP-DE-LA-PC:8080/health
+http://IP-DE-LA-PC:8080/metrics
+```
+
+Protocolo actual: `14.0`.
+
+Además de STATE y COMMAND, V14 soporta mensajes de escenario para precarga, señales, cuenta regresiva, bloqueo, notas privadas, telemetría y modo del evento.
+
+## Atajos V14
+
+En modo operador:
+
+```text
+F8   Preparar siguiente canción
+F9   Lanzar siguiente canción
+F10  Señal CORO
+F11  Bloquear/desbloquear escenario
+```
+
+Con Web MIDI disponible, LiveVoz también puede mapear notas MIDI para anterior, siguiente, coro y final.
+
+## Preflight recomendado
+
+Antes de un evento:
+
+1. `git pull`
+2. `npm install`
+3. `npm run check`
+4. `npm start`
+5. Generar un QR nuevo.
+6. Conectar al menos un teléfono.
+7. Abrir **V14 Director** y verificar Preflight.
+8. Probar cambio de concierto, canción y línea.
+9. Probar una señal y la cuenta regresiva.
+10. Desconectar/reconectar un teléfono para comprobar recuperación.
 
 ## Supabase
 
-El cliente usa únicamente la URL pública y la publishable key de Supabase. Nunca agregues `service_role`, una clave `sb_secret_...` ni la contraseña de PostgreSQL al repositorio.
-
-```bash
-supabase login
-supabase link --project-ref yyjeihyldqbvkkpswxwg
-supabase db push
-```
+El cliente usa solamente la URL pública y una publishable key. Nunca agregues `service_role`, una clave `sb_secret_...` ni la contraseña PostgreSQL al repositorio.
 
 La migración principal está en:
 
 `supabase/migrations/20260912022000_livevoz_v11.sql`
 
-## Stage Network V12
-
-```bash
-npm run stage-server
-```
-
-Por defecto escucha en el puerto `8080`. En teléfonos y tablets usa:
-
-```text
-ws://IP-DE-LA-PC:8080
-```
-
-Todos los integrantes del mismo concierto deben usar el mismo PIN/token de sala.
-
-Endpoints de diagnóstico:
-
-```text
-http://IP-DE-LA-PC:8080/health
-http://IP-DE-LA-PC:8080/metrics
-```
-
-### Mejoras V12
-
-- límite configurable de clientes por sala e IP;
-- token de sala almacenado como hash en el servidor;
-- expiración automática de salas vacías;
-- endpoint de salud y métricas;
-- mensaje de bienvenida con versión de protocolo;
-- validación estricta de rol, sala, dispositivo y tamaño de mensajes;
-- heartbeat y eliminación de conexiones muertas;
-- reconexión automática del cliente con backoff;
-- último estado del escenario conservado por sala;
-- Electron endurecido contra navegación externa inesperada;
-- Service Worker con estrategia offline más segura y control de caché;
-- comprobación automática de integridad del proyecto antes del concierto.
-
-## Variables opcionales del servidor
+## Variables opcionales
 
 ```bash
 LIVEVOZ_WS_PORT=8080
@@ -75,12 +140,6 @@ LIVEVOZ_MAX_CLIENTS_PER_ROOM=40
 LIVEVOZ_MAX_CLIENTS_PER_IP=12
 ```
 
-## Flujo recomendado antes de un concierto
+## Versiones estables
 
-1. Ejecuta `npm install` después de actualizar el repositorio.
-2. Ejecuta `npm run check`.
-3. Ejecuta `npm run stage-server`.
-4. En otra terminal ejecuta `npm run stage-health`.
-5. Conecta operador, músicos y cantante con la misma URL WebSocket y PIN de sala.
-6. Prueba cambio de canción, línea, acordes y reconexión de un dispositivo.
-7. Mantén Stage Network ejecutándose durante todo el evento.
+V13.1 y V13.2 permanecen en sus ramas anteriores. V14 se desarrolla en `feature/livevoz-v14-stage-director` para no modificar las versiones ya aprobadas mientras se prueba en eventos reales.

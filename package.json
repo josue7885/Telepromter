@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "13.2.0",
-  "description": "LiveVoz V13.2 con interfaz móvil completa y sincronización total de concierto entre dispositivos",
+  "version": "14.0.0",
+  "description": "LiveVoz V14 Stage Director con sincronización total, señales, preflight, partes por instrumento, bloqueo de escenario, telemetría y control en vivo",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
@@ -43,6 +43,8 @@
       "livevoz-v13-preload.cjs",
       "livevoz-v13-bridge.js",
       "livevoz-v13-2-sync.js",
+      "livevoz-v14-runtime.js",
+      "livevoz-v14-cloud.js",
       "livevoz-mobile-v13-1.html",
       "livevoz-mobile-v13-2.html",
       "livevoz-logo.png",
