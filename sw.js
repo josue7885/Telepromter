@@ -7,6 +7,7 @@ const APP_SHELL = [
   "./livevoz-v13-bridge.js",
   "./livevoz-v13-2-sync.js",
   "./livevoz-v14-runtime.js",
+  "./livevoz-v14-cloud.js",
   "./manifest.webmanifest",
   "./livevoz-logo.png"
 ];
