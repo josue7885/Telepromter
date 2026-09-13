@@ -10,7 +10,9 @@ const required = [
   "livevoz-v13-stage.html",
   "livevoz-v13-preload.cjs",
   "livevoz-v13-bridge.js",
+  "livevoz-v13-2-sync.js",
   "livevoz-mobile-v13-1.html",
+  "livevoz-mobile-v13-2.html",
   "stage-server.cjs",
   "electron-main.cjs",
   "manifest.webmanifest",
@@ -37,7 +39,7 @@ for (const file of required) {
 }
 
 const html = fs.readFileSync(path.join(root, "teleprompter-v11.html"), "utf8");
-for (const ref of ["./teleprompter.html", "./livevoz-v11-runtime.js", "./livevoz-v13-bridge.js"]) {
+for (const ref of ["./teleprompter.html", "./livevoz-v11-runtime.js", "./livevoz-v13-bridge.js", "./livevoz-v13-2-sync.js"]) {
   if (!html.includes(ref)) {
     console.error(`✗ teleprompter-v11.html no referencia ${ref}`);
     failed = true;
@@ -53,9 +55,17 @@ for (const text of ["Modo concierto", "Generar QR", "Preflight", "Dispositivos c
 }
 
 const bridge = fs.readFileSync(path.join(root, "livevoz-v13-bridge.js"), "utf8");
-for (const text of ["LIVEVOZ_V13_STAGE_CONTEXT", "LIVEVOZ_V13_SET_STAGE_CONFIG", "livevoz_ws_room_token"]) {
+for (const text of ["LIVEVOZ_V13_STAGE_CONTEXT", "LIVEVOZ_V13_SET_STAGE_CONFIG", "livevoz_stage_session_room"]) {
   if (!bridge.includes(text)) {
-    console.error(`✗ Bridge V13 no incluye: ${text}`);
+    console.error(`✗ Bridge V13.2 no incluye: ${text}`);
+    failed = true;
+  }
+}
+
+const sync = fs.readFileSync(path.join(root, "livevoz-v13-2-sync.js"), "utf8");
+for (const text of ["13.2", "livevoz_stage_session_room", "concertSongIds", "lineText", "lineChords", "connectWebSocket"]) {
+  if (!sync.includes(text)) {
+    console.error(`✗ Sync V13.2 no incluye: ${text}`);
     failed = true;
   }
 }
@@ -69,9 +79,9 @@ for (const ref of ["livevoz-v13-stage.html", "livevoz-v13-preload.cjs", "livevoz
 }
 
 const stageServer = fs.readFileSync(path.join(root, "stage-server.cjs"), "utf8");
-for (const text of ['PROTOCOL_VERSION = "13.1"', "DEVICE_PROFILE", "livevoz-mobile-v13-1.html", "livevozInstrument", "livevozTranspose"]) {
+for (const text of ['PROTOCOL_VERSION = "13.2"', "DEVICE_PROFILE", "livevoz-mobile-v13-2.html", '"/app"', "livevoz-v13-2-sync.js"]) {
   if (!stageServer.includes(text)) {
-    console.error(`✗ Stage Network V13.1 no incluye: ${text}`);
+    console.error(`✗ Stage Network V13.2 no incluye: ${text}`);
     failed = true;
   }
 }
@@ -80,10 +90,10 @@ if (stageServer.includes('url.pathname==="/invite"')) {
   failed = true;
 }
 
-const mobile = fs.readFileSync(path.join(root, "livevoz-mobile-v13-1.html"), "utf8");
-for (const text of ["Transposición personal", "Trompeta en Sib", "Saxofón alto en Mib", "Bajo quinto", "DEVICE_PROFILE", "13.1"]) {
+const mobile = fs.readFileSync(path.join(root, "livevoz-mobile-v13-2.html"), "utf8");
+for (const text of ["Entrar a LiveVoz completo", "stageRoom", "Trompeta en Sib", "Saxofón alto en Mib", "Bajo quinto"]) {
   if (!mobile.includes(text)) {
-    console.error(`✗ Cliente móvil V13.1 no incluye: ${text}`);
+    console.error(`✗ Cliente móvil V13.2 no incluye: ${text}`);
     failed = true;
   }
 }
