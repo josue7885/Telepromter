@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "14.1.0",
-  "description": "LiveVoz V14.1 Stage Director con sincronización robusta, recuperación de estado, reconexión progresiva, señales, partes por instrumento, telemetría y control en vivo",
+  "version": "14.2.0",
+  "description": "LiveVoz V14.2 con sincronización confirmada, editor profesional, biblioteca, setlists, perfiles, ensayo, historial, respaldos, nube y experiencia móvil/escritorio mejorada",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
@@ -44,6 +44,7 @@
       "livevoz-v14-runtime.js",
       "livevoz-v14-cloud.js",
       "livevoz-v14-1-polish.js",
+      "livevoz-v14-2-workspace.js",
       "livevoz-mobile-v13-1.html",
       "livevoz-mobile-v13-2.html",
       "livevoz-logo.png",
@@ -52,6 +53,7 @@
       "stage-server.cjs",
       "electron-main.cjs",
       "scripts/**/*",
+      "supabase/migrations/**/*",
       "package.json"
     ],
     "directories": { "output": "release" },
