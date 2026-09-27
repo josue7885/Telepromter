@@ -1,4 +1,4 @@
-const CACHE_NAME = "livevoz-teleprompter-v14-2";
+const CACHE_NAME = "livevoz-teleprompter-v14-3";
 const APP_SHELL = [
   "./app",
   "./teleprompter-v11.html",
@@ -10,6 +10,7 @@ const APP_SHELL = [
   "./livevoz-v14-cloud.js",
   "./livevoz-v14-1-polish.js",
   "./livevoz-v14-2-workspace.js",
+  "./livevoz-v14-3-run-order.js",
   "./manifest.webmanifest",
   "./livevoz-logo.png"
 ];
