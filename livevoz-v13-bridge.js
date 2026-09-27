@@ -42,6 +42,14 @@
       return;
     }
 
+    if (message.type === "LIVEVOZ_FORCE_RESYNC") {
+      try {
+        if (typeof broadcastCurrentState === "function") broadcastCurrentState(true);
+        if (typeof showToast === "function") showToast("Estado reenviado a todos los dispositivos");
+      } catch (_e) {}
+      return;
+    }
+
     if (message.type !== "LIVEVOZ_V13_SET_STAGE_CONFIG") return;
 
     const room = String(message.room || currentRoom() || "livevoz-default").trim().slice(0, 128);
