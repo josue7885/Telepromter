@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "14.5.0",
-  "description": "LiveVoz V14.5 con centro de operador unificado, orden por bloques, Stage Network, QR, pantallas y sincronización",
+  "version": "14.6.0",
+  "description": "LiveVoz V14.6 Centro Integrado: Stage Network, Stage Director, Centro V14.2, orden por bloques y operación en una sola interfaz",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
