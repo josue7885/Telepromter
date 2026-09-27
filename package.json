@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "14.7.0",
-  "description": "LiveVoz V14.7 Consola Única: Stage Network, Stage Director y Centro V14.2 integrados en un solo flujo de operador",
+  "version": "14.8.0",
+  "description": "LiveVoz V14.8 interfaz limpia del operador con navegación plegable y conectividad invisible",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
