@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "14.3.0",
-  "description": "LiveVoz V14.3 con orden global de ejecución visible en todas las pestañas, sincronización confirmada, editor, biblioteca, setlists, músicos, ensayo, historial y recuperación",
+  "version": "14.4.0",
+  "description": "LiveVoz V14.4 con orden de ejecución funcional por bloques, sincronización Stage, editor, biblioteca, setlists y recuperación",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
@@ -48,6 +48,7 @@
       "livevoz-v14-1-polish.js",
       "livevoz-v14-2-workspace.js",
       "livevoz-v14-3-run-order.js",
+      "livevoz-v14-4-block-run-order.js",
       "livevoz-mobile-v13-1.html",
       "livevoz-mobile-v13-2.html",
       "livevoz-logo.png",
