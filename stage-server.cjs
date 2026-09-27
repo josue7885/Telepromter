@@ -4,6 +4,7 @@ const path = require("node:path");
 const http = require("node:http");
 const crypto = require("node:crypto");
 const { WebSocketServer, WebSocket } = require("ws");
+const QRCode = require("qrcode");
 
 const PORT = Number(process.env.LIVEVOZ_WS_PORT || 8080);
 const HOST = process.env.LIVEVOZ_WS_HOST || "0.0.0.0";
@@ -13,7 +14,7 @@ const CLIENT_TIMEOUT_MS = 45000;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_CLIENTS_PER_ROOM = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_ROOM || 40);
 const MAX_CLIENTS_PER_IP = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_IP || 12);
-const PROTOCOL_VERSION = "14.2";
+const PROTOCOL_VERSION = "14.3";
 const rooms = new Map();
 const ipCounters = new Map();
 const metrics = {connections:0,messages:0,rejected:0,roomsCreated:0,reconnectReplacements:0,resyncRequests:0,stateAcks:0,startTime:Date.now()};
@@ -29,6 +30,7 @@ const STATIC_FILES = new Map([
   ["/livevoz-v14-cloud.js", ["livevoz-v14-cloud.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-1-polish.js", ["livevoz-v14-1-polish.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-2-workspace.js", ["livevoz-v14-2-workspace.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-v14-3-run-order.js", ["livevoz-v14-3-run-order.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-logo.png", ["livevoz-logo.png", "image/png"]],
   ["/manifest.webmanifest", ["manifest.webmanifest", "application/manifest+json; charset=utf-8"]],
   ["/sw.js", ["sw.js", "text/javascript; charset=utf-8"]]
@@ -62,6 +64,14 @@ const server=http.createServer((req,res)=>{
   if(url.pathname==="/metrics"){
     res.writeHead(200,{...headers,"content-type":"application/json"});
     return res.end(JSON.stringify({...metrics,uptimeSeconds:Math.round((now()-metrics.startTime)/1000),activeRooms:roomSummary()}));
+  }
+  if(url.pathname==="/invite-data"){
+    const room=safeText(url.searchParams.get("room")||"livevoz-stage",120);
+    const token=safeText(url.searchParams.get("token")||crypto.randomBytes(4).toString("hex").toUpperCase(),64);
+    const host=(req.headers.host||("127.0.0.1:"+PORT)).replace(/^localhost(?=:|$)/,req.socket.localAddress||"127.0.0.1");
+    const joinUrl="http://"+host+"/join?room="+encodeURIComponent(room)+"&token="+encodeURIComponent(token);
+    res.writeHead(200,{...headers,"content-type":"application/json"});
+    return QRCode.toDataURL(joinUrl,{margin:1,width:280,errorCorrectionLevel:"M"}).then(qrDataUrl=>res.end(JSON.stringify({url:joinUrl,room,token,wsUrl:"ws://"+host,qrDataUrl}))).catch(()=>res.end(JSON.stringify({url:joinUrl,room,token,wsUrl:"ws://"+host,qrDataUrl:""})));
   }
   if(url.pathname==="/join"){
     try{

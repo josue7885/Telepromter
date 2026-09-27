@@ -72,7 +72,7 @@ function registerIpc() {
     const started=Date.now(),status=await stageStatus(),followers=(status.rooms||[]).flatMap(r=>r.devices||[]).filter(d=>d.role!=="operator"),lastRevision=Math.max(0,...(status.rooms||[]).map(r=>Number(r.lastRevision)||0)),synced=followers.filter(d=>lastRevision===0||Number(d.lastAckRevision)>=lastRevision).length;
     return{checks:[
       {name:"Stage Network",ok:status.running},
-      {name:"Protocolo Stage V14.2",ok:String(status.health?.protocol||"").startsWith("14.2")},
+      {name:"Protocolo Stage V14.3",ok:String(status.health?.protocol||"").startsWith("14.3")},
       {name:"Dirección IPv4 local",ok:Boolean(status.ip&&status.ip!=="127.0.0.1")},
       {name:"Servidor responde",ok:Boolean(status.health?.ok)},
       {name:"Dispositivos sincronizados",ok:followers.length===0||synced===followers.length},
