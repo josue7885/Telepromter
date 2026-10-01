@@ -42,7 +42,10 @@ async function stageStatus() {
 
 async function startStage() {
   const current=await stageStatus();if(current.running)return current;
-  stageProcess=fork(path.join(__dirname,"stage-server.cjs"),[],{cwd:__dirname,env:{...process.env,LIVEVOZ_WS_PORT:String(STAGE_PORT)},stdio:isDevelopment?"inherit":"ignore"});
+  const serverPath=path.join(__dirname,"stage-server.cjs");
+  const forkOptions={cwd:__dirname,env:{...process.env,LIVEVOZ_WS_PORT:String(STAGE_PORT)},stdio:isDevelopment?"inherit":"ignore"};
+  if(app.isPackaged)forkOptions.execPath=process.execPath,forkOptions.execArgv=[],forkOptions.env.ELECTRON_RUN_AS_NODE="1";
+  stageProcess=fork(serverPath,[],forkOptions);
   stageProcess.once("exit",()=>{stageProcess=null});await new Promise(resolve=>setTimeout(resolve,450));return stageStatus();
 }
 
