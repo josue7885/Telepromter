@@ -265,7 +265,7 @@ footer{min-height:35px;background:#000;border-top:1px solid #222;display:flex;ju
         <button class="small-btn" onclick="openStageWindow('singer')">↗ Cantante</button>
         <button class="small-btn" onclick="openStageWindow('musician')">↗ Músico</button>
         <button class="small-btn" onclick="openStageWindow('hybrid')">↗ Híbrido</button>
-        <button class="small-btn" onclick="toggleLock()">🔒 Bloquear</button>
+        <button id="main-stage-lock-btn" data-livevoz-stage-lock="1" class="small-btn" onclick="toggleUnifiedStageLock()">🔒 Bloquear</button>
       </div>
     </div>
 
@@ -1527,6 +1527,18 @@ function startSongCountdown(){
 function toggleLock(){
   document.getElementById("lock-overlay").classList.toggle("show");
 }
+function toggleUnifiedStageLock(){
+  if(window.LiveVozStageLock?.toggle)return window.LiveVozStageLock.toggle();
+  toggleLock();
+}
+function syncUnifiedStageLockButton(){
+  const b=document.getElementById("main-stage-lock-btn");if(!b)return;
+  const locked=!!window.LiveVozStageLock?.locked;
+  b.textContent=locked?"🔓 Desbloquear":"🔒 Bloquear";
+  b.classList.toggle("active",locked);
+  b.setAttribute("aria-pressed",locked?"true":"false");
+}
+setInterval(syncUnifiedStageLockButton,750);
 document.getElementById("lock-overlay").addEventListener("click",()=>{
   const now=Date.now();if(now-lockTapTimer<500)toggleLock();lockTapTimer=now;
 });
