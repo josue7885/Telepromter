@@ -32,7 +32,11 @@
   function history(action,details={}){const rows=load(STORE.history,[]);rows.unshift({at:new Date().toISOString(),action,details});save(STORE.history,rows.slice(0,250));}
   function fmtTime(sec){sec=Math.max(0,Math.round(sec||0));return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`}
   function showBanner(text,kind="info",ms=3500){let el=document.getElementById("lv14-banner");if(!el){el=document.createElement("div");el.id="lv14-banner";el.style.cssText="position:fixed;z-index:99999;left:50%;top:18px;transform:translateX(-50%);max-width:min(92vw,850px);padding:16px 22px;border-radius:14px;font:900 clamp(18px,4vw,34px) system-ui;text-align:center;background:#111;color:#fff;border:2px solid #f1c40f;box-shadow:0 20px 70px #000b;display:none";document.body.appendChild(el)}el.textContent=text;el.style.borderColor=kind==="danger"?"#ff6677":kind==="ok"?"#42d392":"#f1c40f";el.style.display="block";clearTimeout(el._t);el._t=setTimeout(()=>el.style.display="none",ms)}
-  function applyLock(v){stageLocked=!!v;localStorage.setItem(STORE.lock,stageLocked?"1":"0");document.body.classList.toggle("lv14-locked",stageLocked);let s=document.getElementById("lv14-lock-style");if(!s){s=document.createElement("style");s.id="lv14-lock-style";s.textContent="body.lv14-locked:not(.operator) .role-selector{pointer-events:none;opacity:.55}#lv14-lock-pill{position:fixed;right:12px;bottom:42px;z-index:9999;padding:7px 10px;border-radius:999px;background:#3a1717;color:#ffb0b0;font:800 11px system-ui;display:none}body.lv14-locked #lv14-lock-pill{display:block}";document.head.appendChild(s)}let p=document.getElementById("lv14-lock-pill");if(!p){p=document.createElement("div");p.id="lv14-lock-pill";p.textContent="🔒 Escenario bloqueado";document.body.appendChild(p)}}
+  function applyLock(v){stageLocked=!!v;localStorage.setItem(STORE.lock,stageLocked?"1":"0");document.body.classList.toggle("lv14-locked",stageLocked);updateMainLockButton();let s=document.getElementById("lv14-lock-style");if(!s){s=document.createElement("style");s.id="lv14-lock-style";s.textContent="body.lv14-locked:not(.operator) .role-selector{pointer-events:none;opacity:.55}#lv14-lock-pill{position:fixed;right:12px;bottom:42px;z-index:9999;padding:7px 10px;border-radius:999px;background:#3a1717;color:#ffb0b0;font:800 11px system-ui;display:none}body.lv14-locked #lv14-lock-pill{display:block}";document.head.appendChild(s)}let p=document.getElementById("lv14-lock-pill");if(!p){p=document.createElement("div");p.id="lv14-lock-pill";p.textContent="🔒 Escenario bloqueado";document.body.appendChild(p)}}
+  function updateMainLockButton(){const buttons=[...document.querySelectorAll('[data-livevoz-stage-lock],.toolbar-actions button')];const b=buttons.find(x=>x.dataset.livevozStageLock==="1"||/Bloquear|Desbloquear/.test(x.textContent||""));if(!b)return;b.dataset.livevozStageLock="1";b.textContent=stageLocked?"🔓 Desbloquear":"🔒 Bloquear";b.classList.toggle("active",stageLocked);b.setAttribute("aria-pressed",stageLocked?"true":"false");}
+  function setStageLock(v,{broadcast=true}={}){applyLock(!!v);if(broadcast)rawSend("LOCK_STAGE",{locked:stageLocked});keepAwake(stageLocked);history("stage_lock",{locked:stageLocked});renderDirector();return stageLocked}
+  function toggleStageLock(){return setStageLock(!stageLocked)}
+  window.LiveVozStageLock={get locked(){return stageLocked},lock:()=>setStageLock(true),unlock:()=>setStageLock(false),toggle:toggleStageLock};
   async function keepAwake(on){try{if(on&&"wakeLock"in navigator&&!wakeLock)wakeLock=await navigator.wakeLock.request("screen");if(!on&&wakeLock){await wakeLock.release();wakeLock=null}}catch(_e){}}
 
   function handleSignal(p={}){const label=safe(p.label||p.message,120)||"SEÑAL";showBanner(label,p.kind||"info",Number(p.ms)||3500);try{navigator.vibrate?.(p.vibrate||[120,60,120])}catch(_e){}history("signal_received",{label})}
@@ -47,7 +51,7 @@
     if(type==="SIGNAL")handleSignal(message.payload);
     else if(type==="COUNTDOWN")startCountdown(message.payload);
     else if(type==="PRELOAD")applyPreload(message.payload);
-    else if(type==="LOCK_STAGE")applyLock(!!message.payload?.locked);
+    else if(type==="LOCK_STAGE"){applyLock(!!message.payload?.locked);keepAwake(stageLocked);}
     else if(type==="PRIVATE_NOTE")applyPrivateNote(message.payload);
     else if(type==="STAGE_MODE")applyStageMode(message.payload);
     else if(type==="DEVICE_TELEMETRY"&&isOperator())registerDevice?.({...message.payload,online:true,lastSeen:Date.now()});
@@ -58,7 +62,7 @@
   function sendSignal(label,kind="info"){rawSend("SIGNAL",{label,kind,vibrate:[120,60,120],ms:3500});handleSignal({label,kind});history("signal_sent",{label})}
   function prepareNext(){const p=nextSongPayload();if(!p)return showToast?.("No hay siguiente canción","warning");rawSend("PRELOAD",p);applyPreload(p);history("preload",p);showToast?.(`⏭ Preparada: ${p.songTitle}`)}
   function launchNext(){if(typeof nextSong==="function"){nextSong(true);history("launch_next",{song:currentSong()?.title})}}
-  function toggleLock(){applyLock(!stageLocked);rawSend("LOCK_STAGE",{locked:stageLocked});keepAwake(stageLocked);history("stage_lock",{locked:stageLocked});renderDirector()}
+  function toggleLock(){return toggleStageLock()}
   function setMode(mode){applyStageMode({mode});rawSend("STAGE_MODE",{mode});history("stage_mode",{mode});renderDirector()}
   function setBlock(block){const song=currentSong();if(!song)return;const all=load(STORE.blocks,{});all[currentConcertId]||={};all[currentConcertId][song.id]=block;save(STORE.blocks,all);broadcastCurrentState?.(true);history("block_set",{song:song.title,block});renderDirector()}
   function savePart(){const song=currentSong();if(!song)return;const sel=document.getElementById("lv14-part-instrument"),txt=document.getElementById("lv14-part-text");if(!sel||!txt)return;const all=load(STORE.parts,{});all[song.id]||={};all[song.id][sel.value]=txt.value.trim();save(STORE.parts,all);broadcastCurrentState?.(true);history("part_saved",{song:song.title,instrument:sel.value});showToast?.("Parte guardada")}
