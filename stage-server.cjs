@@ -6,8 +6,11 @@ const crypto = require("node:crypto");
 const { WebSocketServer, WebSocket } = require("ws");
 const QRCode = require("qrcode");
 
-const PORT = Number(process.env.LIVEVOZ_WS_PORT || 8080);
-const HOST = process.env.LIVEVOZ_WS_HOST || "0.0.0.0";
+const DEFAULT_PORT = Number(process.env.LIVEVOZ_WS_PORT || 8080);
+const DEFAULT_HOST = process.env.LIVEVOZ_WS_HOST || "0.0.0.0";
+let activePort = DEFAULT_PORT;
+let activeHost = DEFAULT_HOST;
+let heartbeat = null;
 const MAX_MESSAGE_BYTES = 64 * 1024;
 const HEARTBEAT_MS = 15000;
 const CLIENT_TIMEOUT_MS = 45000;
@@ -71,7 +74,7 @@ const server=http.createServer((req,res)=>{
   if(url.pathname==="/invite-data"){
     const room=safeText(url.searchParams.get("room")||"livevoz-stage",120);
     const token=safeText(url.searchParams.get("token")||crypto.randomBytes(4).toString("hex").toUpperCase(),64);
-    const host=(req.headers.host||("127.0.0.1:"+PORT)).replace(/^localhost(?=:|$)/,req.socket.localAddress||"127.0.0.1");
+    const host=(req.headers.host||("127.0.0.1:"+activePort)).replace(/^localhost(?=:|$)/,req.socket.localAddress||"127.0.0.1");
     const joinUrl="http://"+host+"/join?room="+encodeURIComponent(room)+"&token="+encodeURIComponent(token);
     res.writeHead(200,{...headers,"content-type":"application/json"});
     return QRCode.toDataURL(joinUrl,{margin:1,width:280,errorCorrectionLevel:"M"}).then(qrDataUrl=>res.end(JSON.stringify({url:joinUrl,room,token,wsUrl:"ws://"+host,qrDataUrl}))).catch(()=>res.end(JSON.stringify({url:joinUrl,room,token,wsUrl:"ws://"+host,qrDataUrl:""})));
@@ -155,8 +158,43 @@ wss.on("connection",(ws,req)=>{
   ws.on("error",()=>leaveRoom(ws));
 });
 
-const heartbeat=setInterval(()=>{const t=now();for(const [roomId,room]of rooms){for(const ws of room.clients){if(!ws.isAlive||t-ws.lastSeen>CLIENT_TIMEOUT_MS){leaveRoom(ws);try{ws.terminate();}catch(_e){}continue;}ws.isAlive=false;try{ws.ping();}catch(_e){}}if(room.clients.size===0&&t-room.updatedAt>ROOM_TTL_MS)rooms.delete(roomId);}},HEARTBEAT_MS);heartbeat.unref();
-server.on("error",error=>{if(error?.code==="EADDRINUSE")console.error(`LiveVoz Stage Network: el puerto ${PORT} ya está en uso.`);else console.error("LiveVoz Stage Network:",error);});
-server.listen(PORT,HOST,()=>console.log(`LiveVoz Stage Network v${PROTOCOL_VERSION} escuchando en ws://${HOST}:${PORT}`));
-process.on("SIGINT",()=>{clearInterval(heartbeat);wss.close(()=>server.close(()=>process.exit(0)));});
-process.on("SIGTERM",()=>{clearInterval(heartbeat);wss.close(()=>server.close(()=>process.exit(0)));});
+function startHeartbeat(){
+  if(heartbeat)return;
+  heartbeat=setInterval(()=>{const t=now();for(const [roomId,room]of rooms){for(const ws of room.clients){if(!ws.isAlive||t-ws.lastSeen>CLIENT_TIMEOUT_MS){leaveRoom(ws);try{ws.terminate();}catch(_e){}continue;}ws.isAlive=false;try{ws.ping();}catch(_e){}}if(room.clients.size===0&&t-room.updatedAt>ROOM_TTL_MS)rooms.delete(roomId);}},HEARTBEAT_MS);
+  heartbeat.unref();
+}
+
+function startStageServer(options={}){
+  if(server.listening)return Promise.resolve({ok:true,host:activeHost,port:activePort,protocol:PROTOCOL_VERSION,alreadyRunning:true});
+  activePort=Number(options.port||DEFAULT_PORT);
+  activeHost=String(options.host||DEFAULT_HOST);
+  startHeartbeat();
+  return new Promise((resolve,reject)=>{
+    const onError=error=>{server.off("listening",onListening);if(heartbeat){clearInterval(heartbeat);heartbeat=null;}reject(error);};
+    const onListening=()=>{server.off("error",onError);console.log(`LiveVoz Stage Network v${PROTOCOL_VERSION} escuchando en ws://${activeHost}:${activePort}`);resolve({ok:true,host:activeHost,port:activePort,protocol:PROTOCOL_VERSION});};
+    server.once("error",onError);
+    server.once("listening",onListening);
+    server.listen(activePort,activeHost);
+  });
+}
+
+function stopStageServer(){
+  if(heartbeat){clearInterval(heartbeat);heartbeat=null;}
+  for(const room of rooms.values())for(const ws of room.clients){try{ws.terminate();}catch(_e){}}
+  rooms.clear();ipCounters.clear();
+  return new Promise(resolve=>{
+    const closeHttp=()=>{if(!server.listening)return resolve();server.close(()=>resolve());};
+    try{wss.close(()=>closeHttp());}catch(_e){closeHttp();}
+  });
+}
+
+server.on("error",error=>{if(error?.code==="EADDRINUSE")console.error(`LiveVoz Stage Network: el puerto ${activePort} ya está en uso.`);else console.error("LiveVoz Stage Network:",error);});
+
+if(require.main===module){
+  startStageServer().catch(error=>{console.error("LiveVoz Stage Network no pudo iniciar:",error);process.exitCode=1;});
+  const shutdown=()=>stopStageServer().finally(()=>process.exit(0));
+  process.on("SIGINT",shutdown);
+  process.on("SIGTERM",shutdown);
+}
+
+module.exports={startStageServer,stopStageServer,PROTOCOL_VERSION};
