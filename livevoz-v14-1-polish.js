@@ -1,6 +1,6 @@
 (()=>{
   "use strict";
-  const VERSION="14.1";
+  const VERSION="15.0";
   const ROOM_KEY="livevoz_stage_session_room";
   const TOKEN_KEY="livevoz_ws_room_token";
   const SNAPSHOT_KEY="livevoz_v14_1_last_state";
@@ -19,8 +19,8 @@
   function saveSnapshot(state){try{localStorage.setItem(SNAPSHOT_KEY,JSON.stringify({at:now(),state}))}catch(_e){}}
   function loadSnapshot(){try{const x=JSON.parse(localStorage.getItem(SNAPSHOT_KEY)||"null");return x&&now()-Number(x.at)<12*60*60*1000?x.state:null}catch(_e){return null}}
 
-  function ensureChip(){let el=document.getElementById("lv141-net");if(el)return el;el=document.createElement("div");el.id="lv141-net";el.style.cssText="position:fixed;left:12px;top:12px;z-index:99998;padding:7px 10px;border-radius:999px;background:#2b1d0d;color:#ffd98a;border:1px solid #65491f;font:800 11px system-ui;pointer-events:none";el.textContent="V14.1 · conectando";document.body.appendChild(el);return el;}
-  function setChip(text,kind="warn"){const el=ensureChip();el.textContent=`V14.1 · ${text}`;const p=kind==="ok"?["#123324","#9cf0c9","#235f47"]:kind==="bad"?["#3b171d","#ff9eaa","#73303b"]:["#2b1d0d","#ffd98a","#65491f"];el.style.background=p[0];el.style.color=p[1];el.style.borderColor=p[2];}
+  function ensureChip(){let el=document.getElementById("lv141-net");if(el)return el;el=document.createElement("div");el.id="lv141-net";el.style.cssText="position:fixed;left:12px;top:12px;z-index:99998;padding:7px 10px;border-radius:999px;background:#2b1d0d;color:#ffd98a;border:1px solid #65491f;font:800 11px system-ui;pointer-events:none";el.textContent="V15 · conectando";document.body.appendChild(el);return el;}
+  function setChip(text,kind="warn"){const el=ensureChip();el.textContent=`V15 · ${text}`;const p=kind==="ok"?["#123324","#9cf0c9","#235f47"]:kind==="bad"?["#3b171d","#ff9eaa","#73303b"]:["#2b1d0d","#ffd98a","#65491f"];el.style.background=p[0];el.style.color=p[1];el.style.borderColor=p[2];}
 
   const previousApply=typeof applyRemoteState==="function"?applyRemoteState:null;
   if(previousApply)applyRemoteState=function(state){if(state&&typeof state==="object")saveSnapshot(state);return previousApply(state);};
@@ -54,7 +54,7 @@
       const endpoint=new URL(base);endpoint.searchParams.set("room",room());endpoint.searchParams.set("token",roomToken);endpoint.searchParams.set("device",deviceId);endpoint.searchParams.set("role",currentRole);endpoint.searchParams.set("name",deviceName);endpoint.searchParams.set("instrument",instrument());endpoint.searchParams.set("transpose",String(transpose()));endpoint.searchParams.set("v",VERSION);
       const socket=new WebSocket(endpoint.toString());ws=socket;setChip("conectando","warn");updateNetworkUI?.("Conectando…");
       socket.onopen=()=>{if(ws!==socket)return;retry=0;lastMessageAt=now();networkMode="websocket";setChip("conectado","ok");updateNetworkUI?.();rawSend("DEVICE_JOIN",profile());rawSend("DEVICE_PROFILE",profile());if(currentRole==="operator")setTimeout(()=>broadcastCurrentState?.(true),120);else setTimeout(()=>rawSend("RESYNC_REQUEST",{deviceId}),180);if(!options.silent)showToast?.("📡 Stage Network conectado");};
-      socket.onmessage=e=>{if(ws!==socket||typeof e.data!=="string"||e.data.length>65536)return;let msg;try{msg=JSON.parse(e.data)}catch(_e){return}lastMessageAt=now();if(msg.messageId&&remember(msg.messageId))return;try{handleNetworkMessage(msg,"websocket")}catch(err){console.error("LiveVoz V14.1 mensaje",err)}};
+      socket.onmessage=e=>{if(ws!==socket||typeof e.data!=="string"||e.data.length>65536)return;let msg;try{msg=JSON.parse(e.data)}catch(_e){return}lastMessageAt=now();if(msg.messageId&&remember(msg.messageId))return;try{handleNetworkMessage(msg,"websocket")}catch(err){console.error("LiveVoz V15 mensaje",err)}};
       socket.onerror=()=>{setChip("problema de red","warn");updateNetworkUI?.("Error de red")};
       socket.onclose=e=>{if(ws===socket)ws=null;if(networkMode==="websocket")networkMode="local";if(e.code===4001){setChip("PIN o sala rechazado","bad");updateNetworkUI?.("PIN/sala rechazado");showToast?.("PIN de Stage Network incorrecto","error");return}scheduleRetry(navigator.onLine===false?"sin Wi‑Fi":"desconectado")};
     }catch(_e){scheduleRetry("error de conexión")}
@@ -68,6 +68,6 @@
 
   function installRecoveryButton(){if(currentRole!=="operator")return;const actions=document.querySelector(".toolbar-actions");if(!actions||document.getElementById("lv141-resync"))return;const b=document.createElement("button");b.id="lv141-resync";b.className="small-btn";b.textContent="↻ Resincronizar";b.title="Envía el estado actual a todos los dispositivos";b.onclick=()=>{broadcastCurrentState?.(true);rawSend("SIGNAL",{label:"SINCRONIZADO",kind:"ok",ms:1200,vibrate:[80]});showToast?.("Estado reenviado a todos los dispositivos")};actions.appendChild(b);}
 
-  function boot(){document.title="LiveVoz V14.1 Stage Director";const sub=document.querySelector(".brand-sub");if(sub)sub.textContent="V14.1 · STAGE DIRECTOR · CONCERT RELIABILITY";ensureChip();recoverView();networkWatch();connectionWatch();startHeartbeat();installRecoveryButton();if(!navigator.onLine)setChip("sin conexión · modo supervivencia","bad");else if(wsBase())setTimeout(()=>connectWebSocket({silent:true}),350);console.info("LiveVoz V14.1 reliability activo");}
+  function boot(){document.title="LiveVoz V15 Stage Director";const sub=document.querySelector(".brand-sub");if(sub)sub.textContent="V15 · STAGE DIRECTOR · CONCERT RELIABILITY";ensureChip();recoverView();networkWatch();connectionWatch();startHeartbeat();installRecoveryButton();if(!navigator.onLine)setChip("sin conexión · modo supervivencia","bad");else if(wsBase())setTimeout(()=>connectWebSocket({silent:true}),350);console.info("LiveVoz V15 reliability activo");}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else setTimeout(boot,0);
 })();
