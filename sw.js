@@ -12,6 +12,8 @@ const APP_SHELL = [
   "./livevoz-v14-2-workspace.js",
   "./livevoz-v14-3-run-order.js",
   "./livevoz-v14-4-block-run-order.js",
+  "./livevoz-v15-professional.js",
+  "./livevoz-v15-operator-safety.js",
   "./manifest.webmanifest",
   "./livevoz-logo.png"
 ];
