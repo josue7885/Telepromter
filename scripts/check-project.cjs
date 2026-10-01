@@ -23,7 +23,7 @@ for(const text of ["Centro de trabajo","Biblioteca","Editor","Setlist","Perfiles
 if(workspace.includes("service_role")||workspace.includes("sb_secret_"))fail("Workspace V14.2 contiene credencial secreta");
 
 const polish=read("livevoz-v14-1-polish.js");
-for(const text of ["14.1","RESYNC_REQUEST","modo supervivencia","Resincronizar"])if(!polish.includes(text))fail(`Capa V14.1 no incluye: ${text}`);
+for(const text of ["V15","RESYNC_REQUEST","modo supervivencia","Resincronizar"])if(!polish.includes(text))fail(`Capa de fiabilidad V15 no incluye: ${text}`);
 
 const server=read("stage-server.cjs");
 for(const text of ['PROTOCOL_VERSION = "15.0"',"STATE_ACK","stateAcks","lastAckRevision","RESYNC_REQUEST","livevoz-v14-2-workspace.js","livevoz-v15-professional.js","livevoz-v15-operator-safety.js"]){if(!server.includes(text))fail(`Stage Network V15 no incluye: ${text}`)}
