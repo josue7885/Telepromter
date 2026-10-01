@@ -1,7 +1,7 @@
 {
   "name": "livevoz-teleprompter",
-  "version": "14.9.1",
-  "description": "LiveVoz V14.9 espacio de operador móvil con todas las funciones avanzadas accesibles",
+  "version": "15.0.0",
+  "description": "LiveVoz V15 consola unificada con navegación completa y controles persistentes en modo concierto",
   "author": {
     "name": "JOSUE ALEXIS CHAVEZ GUEVARA",
     "email": "josue.alexis.chavez.guevara@livevoz.app"
@@ -49,6 +49,8 @@
       "livevoz-v14-2-workspace.js",
       "livevoz-v14-3-run-order.js",
       "livevoz-v14-4-block-run-order.js",
+      "livevoz-v15-professional.js",
+      "livevoz-v15-operator-safety.js",
       "livevoz-mobile-v13-1.html",
       "livevoz-mobile-v13-2.html",
       "livevoz-logo.png",

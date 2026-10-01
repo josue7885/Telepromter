@@ -1,6 +1,6 @@
-# LiveVoz V14.2 — Core Workflow
+# LiveVoz V15 — Consola unificada para conciertos
 
-LiveVoz V14.2 amplía Stage Director con herramientas para trabajar el repertorio completo del grupo: sincronización confirmada, editor de canciones/acordes, biblioteca y búsqueda, setlists rápidos, perfiles de músicos, notas personales, ensayo, historial, respaldo y operación offline.
+LiveVoz V15 es una plataforma de teleprompter musical y operación de conciertos con biblioteca de canciones, letras y acordes, transposición, setlists, bloques, perfiles de músicos, sincronización de dispositivos, modo ensayo, recuperación de concierto, preflight y operación offline.
 
 ## Inicio rápido
 
@@ -10,96 +10,60 @@ npm run check
 npm start
 ```
 
-## Novedades principales
+## Funciones principales
 
-### Sincronización V14.2
-- protocolo Stage Network `14.2`;
-- `stateRevision` en el estado del operador;
-- `STATE_ACK` desde los dispositivos;
-- panel con confirmación de sincronización por músico;
-- `RESYNC_REQUEST` y recuperación de último estado conservados desde V14.1;
-- reconexión, deduplicación y modo supervivencia.
+- Operador con biblioteca, Control de Escenario y navegación adaptable.
+- Teleprompter para cantante, músico y vista híbrida.
+- Letras, acordes, BPM, tonalidad y cambio de tono por semitonos.
+- Editor profesional con secciones INTRO, VERSO, PRE-CORO, CORO, PUENTE, SOLO y FINAL.
+- Búsqueda global de repertorio.
+- Conciertos y setlists con orden de ejecución y bloques.
+- Arrastrar canciones entre bloques en equipos compatibles.
+- Modo concierto con controles rápidos para anterior, siguiente, CORO, FINAL, pausa, emergencia y funciones.
+- Bloqueo/desbloqueo opcional del escenario con estado sincronizado.
+- Perfiles de músicos, instrumento, rol, transposición, batería, conexión y sincronización.
+- Ensayo con estados Lista, Necesita ensayo y Problema, notas y lista automática de canciones a practicar.
+- Recuperación local del concierto tras cierre inesperado.
+- Preflight antes del show.
+- Sincronización local mediante servidor LiveVoz protocolo 15.0.
+- QR para conectar teléfonos.
+- Respaldo, historial y funciones offline heredadas del flujo V14.
 
-### Centro V14.2
-El botón **🧰 Centro V14.2** abre una interfaz responsive con:
+## Atajos de concierto
 
-- **Biblioteca:** buscador por título, categoría y tono.
-- **Editor:** título, categoría, tono, BPM, letra, acordes y cues por línea.
-- **Setlist:** agregar rápido, quitar y reordenar canciones.
-- **Músicos:** perfiles con instrumento, rol y transposición personal.
-- **Notas:** anotaciones privadas por canción y dispositivo.
-- **Ensayo:** estado Pendiente / Revisar / Lista y temporizador de sesión.
-- **Historial:** cambios y acciones locales del concierto.
-- **Respaldo:** exportar/importar JSON y crear respaldo en LiveVoz Cloud.
+- Espacio: siguiente línea.
+- Flecha derecha: siguiente canción.
+- Flecha izquierda: canción anterior.
+- C: señal CORO.
+- F: señal FINAL.
+- Esc: emergencia, según el contexto de operación.
 
-### Nube y permisos
-La nueva migración agrega:
+## Preparación recomendada
 
-```text
-musician_profiles
-personal_song_notes
-rehearsal_sessions
-rehearsal_song_status
-concert_activity
-```
+Antes de un evento:
+1. Abre LiveVoz.
+2. Selecciona o prepara el concierto/setlist.
+3. Inicia la conexión de dispositivos.
+4. Conecta los teléfonos mediante QR.
+5. Revisa batería y sincronización.
+6. Abre la pantalla externa si se utilizará.
+7. Ejecuta Preflight.
+8. Comprueba tonalidad y transposición.
+9. Activa Modo concierto cuando estés listo.
 
-También habilita búsqueda con `pg_trgm` para títulos/categorías y mantiene RLS para que cada usuario solo modifique la información permitida.
+## Seguridad de versión
 
-Migración V14.2:
+La versión del paquete es **15.0.0** y el protocolo del servidor local es **15.0**. La rama de desarrollo/finalización es `feature/livevoz-v15-unified-operator`. La rama `feature/livevoz-v14.9.1-operator-scroll` se conserva como punto de regreso.
 
-```text
-supabase/migrations/20260913105500_livevoz_v14_2_core_workflow.sql
-```
-
-Para aplicarla:
+## Compilación
 
 ```bash
-supabase db push
-```
-
-## Móvil y offline
-
-La página QR se identifica como V14.2, verifica `/health`, conserva nombre/instrumento/transposición y abre `/app`. El Service Worker usa un caché V14.2 e incluye el nuevo workspace para que la interfaz principal pueda recuperarse sin conexión cuando el navegador lo permite.
-
-## Panel del operador
-
-El panel muestra protocolo, dispositivos, baterías, retrasos y ahora también:
-
-- revisión de estado (`lastRevision`);
-- confirmación de cada dispositivo (`lastAckRevision`);
-- número de dispositivos sincronizados;
-- botón `↻ Sincronizar` para reenviar el estado actual.
-
-## Prueba recomendada
-
-```powershell
-cd C:\Users\josue\Documents\Telepromter
-git fetch origin
-git switch feature/livevoz-v14.2-core-workflow
-git pull
-npm install
 npm run check
-npm start
+npm run dist:win
 ```
 
-Después:
+Los instaladores/portables generados por electron-builder se guardan en `release/`.
 
-1. Genera un QR nuevo.
-2. Conecta al menos dos teléfonos.
-3. Cambia concierto, canción y línea.
-4. Comprueba que el panel indique los dispositivos sincronizados.
-5. Abre **Centro V14.2** y prueba biblioteca, editor y setlist.
-6. Guarda una nota personal en un teléfono.
-7. Inicia un ensayo y marca canciones como Lista/Revisar.
-8. Exporta un respaldo JSON.
-9. Apaga/enciende Wi‑Fi en un teléfono y verifica la recuperación.
+## Autor
 
-`npm run check` debe terminar con:
-
-```text
-LiveVoz V14.2 check: OK
-```
-
-## Seguridad de versiones
-
-V14.1 permanece intacta en `feature/livevoz-v14.1-stage-director-polish`. V14.2 se desarrolla en `feature/livevoz-v14.2-core-workflow` para conservar un punto de regreso probado.
+LiveVoz Teleprompter — JOSUE ALEXIS CHAVEZ GUEVARA

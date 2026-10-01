@@ -66,8 +66,8 @@ header{min-height:68px;background:#000;border-bottom:1px solid #292929;display:f
 .current-show{font-size:.9rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .current-show small{display:block;color:var(--muted);font-size:.65rem;margin-top:2px}
 .toolbar-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.operator-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(280px,.85fr) minmax(420px,1.55fr);gap:12px;overflow:hidden}.operator-column.network-column{display:none!important}
-.operator-column{min-width:0;min-height:0;background:linear-gradient(160deg,#161616,#101010);border:1px solid #2b2b2b;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.operator-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(280px,.85fr) minmax(420px,1.55fr);gap:12px;overflow:auto;scrollbar-gutter:stable;overscroll-behavior:contain}.operator-column.network-column{display:none!important}
+.operator-column{min-width:0;min-height:0;background:linear-gradient(160deg,#161616,#101010);border:1px solid #2b2b2b;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:scroll;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain}.operator-column:nth-child(2)>*{flex-shrink:0}.operator-column:nth-child(2){scroll-behavior:smooth}.tone-controls{position:sticky;bottom:-14px;z-index:12;background:#101010;padding:10px 0 14px;border-top:1px solid #303030;box-shadow:0 -12px 24px rgba(0,0,0,.55)}.operator-column::-webkit-scrollbar{width:11px}.operator-column::-webkit-scrollbar-thumb{background:#3b4656;border-radius:10px;border:2px solid #141414}.operator-column::-webkit-scrollbar-track{background:#0d0d0d}.operator-column>.column-header{position:sticky;top:-14px;z-index:3;background:#141414;padding-top:14px}
 .column-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;border-bottom:1px solid #2b2b2b;gap:8px}
 .column-header h3{color:#eee;font-size:.85rem}
 .column-header span{color:var(--muted);font-size:.65rem}
@@ -265,7 +265,7 @@ footer{min-height:35px;background:#000;border-top:1px solid #222;display:flex;ju
         <button class="small-btn" onclick="openStageWindow('singer')">↗ Cantante</button>
         <button class="small-btn" onclick="openStageWindow('musician')">↗ Músico</button>
         <button class="small-btn" onclick="openStageWindow('hybrid')">↗ Híbrido</button>
-        <button class="small-btn" onclick="toggleLock()">🔒 Bloquear</button>
+        <button id="main-stage-lock-btn" data-livevoz-stage-lock="1" class="small-btn" onclick="toggleUnifiedStageLock()">🔒 Bloquear</button>
       </div>
     </div>
 
@@ -327,13 +327,15 @@ footer{min-height:35px;background:#000;border-top:1px solid #222;display:flex;ju
           <button id="auto-advance-btn" class="small-btn" onclick="toggleAutoAdvance()">▶ Auto avance</button>
           <button class="small-btn" onclick="sendStagePing()">📣 Avisar escenario</button>
         </div>
-        <div class="editor-grid">
-          <div class="form-group"><label>BPM</label><input id="bpm-input" type="number" min="30" max="250" step="1" value="100" onchange="setBPM(this.value)"></div>
-          <div class="form-group"><label>Tonalidad</label><select id="key-select" onchange="setKey(this.value)"></select></div>
-        </div>
-        <div class="editor-grid">
-          <button class="small-btn" onclick="transposeSemitone(-1)">♭ Bajar tono</button>
-          <button class="small-btn" onclick="transposeSemitone(1)">♯ Subir tono</button>
+        <div class="tone-controls">
+          <div class="editor-grid">
+            <div class="form-group"><label>BPM</label><input id="bpm-input" type="number" min="30" max="250" step="1" value="100" onchange="setBPM(this.value)"></div>
+            <div class="form-group"><label>Tonalidad</label><select id="key-select" onchange="setKey(this.value)"></select></div>
+          </div>
+          <div class="editor-grid" style="margin-top:7px">
+            <button class="small-btn" onclick="transposeSemitone(-1)">♭ Bajar tono</button>
+            <button class="small-btn" onclick="transposeSemitone(1)">♯ Subir tono</button>
+          </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
           <button class="small-btn" onclick="previousSong()">⏮ Canción anterior</button>
@@ -1525,6 +1527,18 @@ function startSongCountdown(){
 function toggleLock(){
   document.getElementById("lock-overlay").classList.toggle("show");
 }
+function toggleUnifiedStageLock(){
+  if(window.LiveVozStageLock?.toggle)return window.LiveVozStageLock.toggle();
+  toggleLock();
+}
+function syncUnifiedStageLockButton(){
+  const b=document.getElementById("main-stage-lock-btn");if(!b)return;
+  const locked=!!window.LiveVozStageLock?.locked;
+  b.textContent=locked?"🔓 Desbloquear":"🔒 Bloquear";
+  b.classList.toggle("active",locked);
+  b.setAttribute("aria-pressed",locked?"true":"false");
+}
+setInterval(syncUnifiedStageLockButton,750);
 document.getElementById("lock-overlay").addEventListener("click",()=>{
   const now=Date.now();if(now-lockTapTimer<500)toggleLock();lockTapTimer=now;
 });

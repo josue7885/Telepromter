@@ -14,7 +14,7 @@ const CLIENT_TIMEOUT_MS = 45000;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_CLIENTS_PER_ROOM = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_ROOM || 40);
 const MAX_CLIENTS_PER_IP = Number(process.env.LIVEVOZ_MAX_CLIENTS_PER_IP || 12);
-const PROTOCOL_VERSION = "14.9";
+const PROTOCOL_VERSION = "15.0";
 const rooms = new Map();
 const ipCounters = new Map();
 const metrics = {connections:0,messages:0,rejected:0,roomsCreated:0,reconnectReplacements:0,resyncRequests:0,stateAcks:0,startTime:Date.now()};
@@ -32,6 +32,8 @@ const STATIC_FILES = new Map([
   ["/livevoz-v14-2-workspace.js", ["livevoz-v14-2-workspace.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-3-run-order.js", ["livevoz-v14-3-run-order.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-4-block-run-order.js", ["livevoz-v14-4-block-run-order.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-v15-professional.js", ["livevoz-v15-professional.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-v15-operator-safety.js", ["livevoz-v15-operator-safety.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-logo.png", ["livevoz-logo.png", "image/png"]],
   ["/manifest.webmanifest", ["manifest.webmanifest", "application/manifest+json; charset=utf-8"]],
   ["/sw.js", ["sw.js", "text/javascript; charset=utf-8"]]
@@ -118,7 +120,7 @@ wss.on("connection",(ws,req)=>{
   ws.livevozRoom=roomId;ws.livevozDevice=device;ws.livevozRole=role;ws.livevozName=name;ws.livevozInstrument=instrument;ws.livevozTranspose=transpose;ws.livevozIp=ip;ws.isAlive=true;ws.lastSeen=now();ws.livevozLeft=false;ws.livevozLastAckRevision=0;ws.livevozLastAckAt=0;
   room.clients.add(ws);room.updatedAt=now();incIp(ip);metrics.connections++;
 
-  send(ws,{type:"WELCOME",payload:{protocol:PROTOCOL_VERSION,roomId,serverTime:now(),compatible:!protocol||protocol.startsWith("14")||protocol.startsWith("13")||protocol.startsWith("12")||protocol.startsWith("11")},timestamp:now(),messageId:`server:${crypto.randomUUID()}`,senderId:"server",senderRole:"server",roomId});
+  send(ws,{type:"WELCOME",payload:{protocol:PROTOCOL_VERSION,roomId,serverTime:now(),compatible:!protocol||protocol.startsWith("15")||protocol.startsWith("14")||protocol.startsWith("13")||protocol.startsWith("12")||protocol.startsWith("11")},timestamp:now(),messageId:`server:${crypto.randomUUID()}`,senderId:"server",senderRole:"server",roomId});
   if(room.lastState)send(ws,room.lastState);
 
   ws.on("pong",()=>{ws.isAlive=true;ws.lastSeen=now();});
