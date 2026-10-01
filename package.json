@@ -92,6 +92,11 @@
         "deb"
       ],
       "category": "AudioVideo"
-    }
+    },
+    "asarUnpack": [
+      "stage-server.cjs",
+      "node_modules/ws/**/*",
+      "node_modules/qrcode/**/*"
+    ]
   }
 }
