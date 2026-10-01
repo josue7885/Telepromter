@@ -41,8 +41,11 @@ async function stageStatus() {
 
 async function startStage() {
   const current=await stageStatus();if(current.running)return current;
-  const serverPath=path.join(__dirname,"stage-server.cjs");
-  const forkOptions={cwd:__dirname,env:{...process.env,LIVEVOZ_WS_PORT:String(STAGE_PORT)},stdio:isDevelopment?"inherit":"ignore",serviceName:"LiveVoz Stage Network"};
+  const serverPath=app.isPackaged
+    ? path.join(process.resourcesPath,"app.asar.unpacked","stage-server.cjs")
+    : path.join(__dirname,"stage-server.cjs");
+  const serverCwd=path.dirname(serverPath);
+  const forkOptions={cwd:serverCwd,env:{...process.env,LIVEVOZ_WS_PORT:String(STAGE_PORT)},stdio:isDevelopment?"inherit":"pipe",serviceName:"LiveVoz Stage Network"};
   stageProcess=utilityProcess.fork(serverPath,[],forkOptions);
   stageProcess.once("exit",()=>{stageProcess=null});await new Promise(resolve=>setTimeout(resolve,450));return stageStatus();
 }
