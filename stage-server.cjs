@@ -32,6 +32,8 @@ const STATIC_FILES = new Map([
   ["/livevoz-v14-2-workspace.js", ["livevoz-v14-2-workspace.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-3-run-order.js", ["livevoz-v14-3-run-order.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-v14-4-block-run-order.js", ["livevoz-v14-4-block-run-order.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-v15-professional.js", ["livevoz-v15-professional.js", "text/javascript; charset=utf-8"]],
+  ["/livevoz-v15-operator-safety.js", ["livevoz-v15-operator-safety.js", "text/javascript; charset=utf-8"]],
   ["/livevoz-logo.png", ["livevoz-logo.png", "image/png"]],
   ["/manifest.webmanifest", ["manifest.webmanifest", "application/manifest+json; charset=utf-8"]],
   ["/sw.js", ["sw.js", "text/javascript; charset=utf-8"]]
@@ -118,7 +120,7 @@ wss.on("connection",(ws,req)=>{
   ws.livevozRoom=roomId;ws.livevozDevice=device;ws.livevozRole=role;ws.livevozName=name;ws.livevozInstrument=instrument;ws.livevozTranspose=transpose;ws.livevozIp=ip;ws.isAlive=true;ws.lastSeen=now();ws.livevozLeft=false;ws.livevozLastAckRevision=0;ws.livevozLastAckAt=0;
   room.clients.add(ws);room.updatedAt=now();incIp(ip);metrics.connections++;
 
-  send(ws,{type:"WELCOME",payload:{protocol:PROTOCOL_VERSION,roomId,serverTime:now(),compatible:!protocol||protocol.startsWith("14")||protocol.startsWith("13")||protocol.startsWith("12")||protocol.startsWith("11")},timestamp:now(),messageId:`server:${crypto.randomUUID()}`,senderId:"server",senderRole:"server",roomId});
+  send(ws,{type:"WELCOME",payload:{protocol:PROTOCOL_VERSION,roomId,serverTime:now(),compatible:!protocol||protocol.startsWith("15")||protocol.startsWith("14")||protocol.startsWith("13")||protocol.startsWith("12")||protocol.startsWith("11")},timestamp:now(),messageId:`server:${crypto.randomUUID()}`,senderId:"server",senderRole:"server",roomId});
   if(room.lastState)send(ws,room.lastState);
 
   ws.on("pong",()=>{ws.isAlive=true;ws.lastSeen=now();});
