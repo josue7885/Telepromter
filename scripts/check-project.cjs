@@ -25,8 +25,12 @@ if(workspace.includes("service_role")||workspace.includes("sb_secret_"))fail("Wo
 const polish=read("livevoz-v14-1-polish.js");
 for(const text of ["V15","RESYNC_REQUEST","modo supervivencia","Resincronizar"])if(!polish.includes(text))fail(`Capa de fiabilidad V15 no incluye: ${text}`);
 
+const electronMain=read("electron-main.cjs");
+for(const text of ["startStageServer","stopStageServer"])if(!electronMain.includes(text))fail(`Electron V15 no integra Stage Network: ${text}`);
+if(electronMain.includes("utilityProcess.fork")||electronMain.includes("app.asar.unpacked"))fail("Electron V15 conserva arranque externo de Stage Network");
+
 const server=read("stage-server.cjs");
-for(const text of ['PROTOCOL_VERSION = "15.0"',"STATE_ACK","stateAcks","lastAckRevision","RESYNC_REQUEST","livevoz-v14-2-workspace.js","livevoz-v15-professional.js","livevoz-v15-operator-safety.js"]){if(!server.includes(text))fail(`Stage Network V15 no incluye: ${text}`)}
+for(const text of ['PROTOCOL_VERSION = "15.0"',"startStageServer","stopStageServer","STATE_ACK","stateAcks","lastAckRevision","RESYNC_REQUEST","livevoz-v14-2-workspace.js","livevoz-v15-professional.js","livevoz-v15-operator-safety.js"]){if(!server.includes(text))fail(`Stage Network V15 no incluye: ${text}`)}
 if(server.includes('url.pathname==="/invite"'))fail("Stage Network conserva endpoint /invite regresivo");
 
 const sw=read("sw.js");
