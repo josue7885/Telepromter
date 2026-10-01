@@ -1,8 +1,7 @@
-const { app, BrowserWindow, Menu, shell, session, ipcMain, screen } = require("electron");
+const { app, BrowserWindow, Menu, shell, session, ipcMain, screen, utilityProcess } = require("electron");
 const path = require("node:path");
 const os = require("node:os");
 const http = require("node:http");
-const { fork } = require("node:child_process");
 const QRCode = require("qrcode");
 
 const isDevelopment = !app.isPackaged;
@@ -43,13 +42,12 @@ async function stageStatus() {
 async function startStage() {
   const current=await stageStatus();if(current.running)return current;
   const serverPath=path.join(__dirname,"stage-server.cjs");
-  const forkOptions={cwd:__dirname,env:{...process.env,LIVEVOZ_WS_PORT:String(STAGE_PORT)},stdio:isDevelopment?"inherit":"ignore"};
-  if(app.isPackaged)forkOptions.execPath=process.execPath,forkOptions.execArgv=[],forkOptions.env.ELECTRON_RUN_AS_NODE="1";
-  stageProcess=fork(serverPath,[],forkOptions);
+  const forkOptions={cwd:__dirname,env:{...process.env,LIVEVOZ_WS_PORT:String(STAGE_PORT)},stdio:isDevelopment?"inherit":"ignore",serviceName:"LiveVoz Stage Network"};
+  stageProcess=utilityProcess.fork(serverPath,[],forkOptions);
   stageProcess.once("exit",()=>{stageProcess=null});await new Promise(resolve=>setTimeout(resolve,450));return stageStatus();
 }
 
-async function stopStage() { if(stageProcess){try{stageProcess.kill("SIGTERM")}catch(_e){}stageProcess=null;await new Promise(resolve=>setTimeout(resolve,220))}return stageStatus(); }
+async function stopStage() { if(stageProcess){try{stageProcess.kill()}catch(_e){}stageProcess=null;await new Promise(resolve=>setTimeout(resolve,220))}return stageStatus(); }
 
 function hardenWindow(win) {
   win.webContents.setWindowOpenHandler(({url})=>{if(url.startsWith("file:"))return{action:"allow"};if(isAllowedExternal(url))shell.openExternal(url);return{action:"deny"}});
@@ -100,5 +98,5 @@ function createWindow(){
 app.whenReady().then(()=>{
   Menu.setApplicationMenu(null);registerIpc();session.defaultSession.setPermissionRequestHandler((_wc,permission,callback)=>callback(new Set(["media","notifications","fullscreen","midi","midiSysex"]).has(permission)));createWindow();startStage().catch(error=>console.error("No se pudo iniciar Stage Network:",error));app.on("activate",()=>{if(BrowserWindow.getAllWindows().length===0)createWindow()});
 });
-app.on("before-quit",()=>{closeStageDisplay();if(stageProcess){try{stageProcess.kill("SIGTERM")}catch(_e){}stageProcess=null}});
+app.on("before-quit",()=>{closeStageDisplay();if(stageProcess){try{stageProcess.kill()}catch(_e){}stageProcess=null}});
 app.on("window-all-closed",()=>{if(process.platform!=="darwin")app.quit()});
