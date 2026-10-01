@@ -1,14 +1,16 @@
-const { app, BrowserWindow, Menu, shell, session, ipcMain, screen, utilityProcess } = require("electron");
+const { app, BrowserWindow, Menu, shell, session, ipcMain, screen } = require("electron");
 const path = require("node:path");
 const os = require("node:os");
 const http = require("node:http");
 const QRCode = require("qrcode");
+const { startStageServer, stopStageServer } = require("./stage-server.cjs");
 
 const isDevelopment = !app.isPackaged;
 const STAGE_PORT = Number(process.env.LIVEVOZ_WS_PORT || 8080);
 let mainWindow = null;
 let displayWindow = null;
-let stageProcess = null;
+let stageManagedByApp = false;
+let stageStartPromise = null;
 
 function isAllowedExternal(url) {
   try { const parsed = new URL(url); return parsed.protocol === "https:"; }
@@ -36,21 +38,30 @@ function requestJson(route) {
 
 async function stageStatus() {
   const [health, metrics] = await Promise.all([requestJson("/health"), requestJson("/metrics")]);
-  return { running:Boolean(health&&health.ok), managedByApp:Boolean(stageProcess), ip:localIpv4(), port:STAGE_PORT, health:health||{}, metrics:metrics||{}, rooms:metrics?.activeRooms||[] };
+  return { running:Boolean(health&&health.ok), managedByApp:stageManagedByApp, ip:localIpv4(), port:STAGE_PORT, health:health||{}, metrics:metrics||{}, rooms:metrics?.activeRooms||[] };
 }
 
 async function startStage() {
   const current=await stageStatus();if(current.running)return current;
-  const serverPath=app.isPackaged
-    ? path.join(process.resourcesPath,"app.asar.unpacked","stage-server.cjs")
-    : path.join(__dirname,"stage-server.cjs");
-  const serverCwd=path.dirname(serverPath);
-  const forkOptions={cwd:serverCwd,env:{...process.env,LIVEVOZ_WS_PORT:String(STAGE_PORT)},stdio:isDevelopment?"inherit":"pipe",serviceName:"LiveVoz Stage Network"};
-  stageProcess=utilityProcess.fork(serverPath,[],forkOptions);
-  stageProcess.once("exit",()=>{stageProcess=null});await new Promise(resolve=>setTimeout(resolve,450));return stageStatus();
+  if(!stageStartPromise){
+    stageStartPromise=startStageServer({port:STAGE_PORT,host:"0.0.0.0"})
+      .then(()=>{stageManagedByApp=true})
+      .catch(async error=>{
+        const status=await stageStatus();
+        if(status.running)return;
+        console.error("No se pudo iniciar Stage Network integrado:",error);
+        throw error;
+      })
+      .finally(()=>{stageStartPromise=null});
+  }
+  await stageStartPromise;
+  return stageStatus();
 }
 
-async function stopStage() { if(stageProcess){try{stageProcess.kill()}catch(_e){}stageProcess=null;await new Promise(resolve=>setTimeout(resolve,220))}return stageStatus(); }
+async function stopStage() {
+  if(stageManagedByApp){stageManagedByApp=false;try{await stopStageServer()}catch(error){console.error("No se pudo detener Stage Network:",error)}}
+  return stageStatus();
+}
 
 function hardenWindow(win) {
   win.webContents.setWindowOpenHandler(({url})=>{if(url.startsWith("file:"))return{action:"allow"};if(isAllowedExternal(url))shell.openExternal(url);return{action:"deny"}});
@@ -101,5 +112,5 @@ function createWindow(){
 app.whenReady().then(()=>{
   Menu.setApplicationMenu(null);registerIpc();session.defaultSession.setPermissionRequestHandler((_wc,permission,callback)=>callback(new Set(["media","notifications","fullscreen","midi","midiSysex"]).has(permission)));createWindow();startStage().catch(error=>console.error("No se pudo iniciar Stage Network:",error));app.on("activate",()=>{if(BrowserWindow.getAllWindows().length===0)createWindow()});
 });
-app.on("before-quit",()=>{closeStageDisplay();if(stageProcess){try{stageProcess.kill()}catch(_e){}stageProcess=null}});
+app.on("before-quit",()=>{closeStageDisplay();if(stageManagedByApp){stageManagedByApp=false;stopStageServer().catch(error=>console.error("No se pudo cerrar Stage Network:",error))}});
 app.on("window-all-closed",()=>{if(process.platform!=="darwin")app.quit()});
